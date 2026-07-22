@@ -63,10 +63,10 @@ export default function DashboardShell({
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="sticky top-0 z-30 border-b border-border bg-card shadow-sm">
-        <div className="px-4 md:px-6 h-14 md:h-16 flex items-center justify-between gap-4">
+        <div className="px-3 md:px-6 h-12 md:h-16 flex items-center justify-between gap-3 md:gap-4">
           <Link
             href="/dashboard"
-            className="font-bold text-primary text-lg shrink-0"
+            className="font-bold text-primary text-base md:text-lg shrink-0 min-w-0 truncate"
           >
             Vigia Judicial
           </Link>
@@ -96,26 +96,26 @@ export default function DashboardShell({
             <button
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
-              className={`flex items-center gap-2 pl-2 pr-3 py-2 rounded-xl border-2 text-sm font-medium transition-all min-h-[44px] ${
+              className={`flex items-center gap-1 md:gap-2 pl-1.5 pr-2 py-1 md:pl-2 md:pr-3 md:py-2 rounded-lg md:rounded-xl border md:border-2 text-sm font-medium transition-all h-9 md:h-auto md:min-h-[44px] ${
                 menuOpen
-                  ? "border-primary bg-primary text-white shadow-lg"
-                  : "border-primary bg-primary/10 text-primary shadow-md ring-2 ring-primary/20"
+                  ? "border-primary bg-primary text-white shadow-md md:shadow-lg"
+                  : "border-primary/60 bg-primary/5 text-primary md:bg-primary/10 md:shadow-md md:ring-2 md:ring-primary/20"
               }`}
               aria-expanded={menuOpen}
               aria-label={menuOpen ? "Cerrar menu" : "Abrir menu"}
             >
               <span
-                className={`w-8 h-8 rounded-full text-xs font-bold flex items-center justify-center ${
+                className={`w-7 h-7 md:w-8 md:h-8 rounded-full text-[10px] md:text-xs font-bold flex items-center justify-center shrink-0 ${
                   menuOpen ? "bg-white/20 text-white" : "bg-primary text-white"
                 }`}
               >
                 {initials}
               </span>
-              <span className="hidden sm:flex flex-col items-start leading-tight">
+              <span className="hidden md:flex flex-col items-start leading-tight">
                 <span className="text-xs opacity-80">Menu</span>
                 <span className="text-sm">{menuOpen ? "Cerrar" : "Abrir"}</span>
               </span>
-              <ChevronIcon open={menuOpen} />
+              <ChevronIcon open={menuOpen} className="w-3.5 h-3.5 md:w-4 md:h-4" />
             </button>
 
             {menuOpen && (
@@ -170,15 +170,19 @@ export default function DashboardShell({
   );
 }
 
-function ChevronIcon({ open }: { open: boolean }) {
+function ChevronIcon({
+  open,
+  className = "w-4 h-4",
+}: {
+  open: boolean;
+  className?: string;
+}) {
   return (
     <svg
-      width="16"
-      height="16"
       viewBox="0 0 24 24"
       fill="none"
       aria-hidden="true"
-      className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+      className={`shrink-0 transition-transform ${open ? "rotate-180" : ""} ${className}`}
     >
       <path
         d="M6 9l6 6 6-6"
