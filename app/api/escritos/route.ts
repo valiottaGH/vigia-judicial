@@ -54,7 +54,7 @@ export async function POST(request: Request) {
       variables: body.variables ?? {},
       expediente_id: body.expediente_id ?? null,
       estado: "borrador",
-    })
+    } as never)
     .select()
     .single();
 

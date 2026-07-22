@@ -44,7 +44,7 @@ export async function PATCH(request: Request) {
     .update({
       full_name: body.full_name,
       notifications_email: body.notifications_email,
-    })
+    } as never)
     .eq("id", user.id)
     .select(
       "full_name, notifications_email, plan, subscription_status, subscription_ends_at"

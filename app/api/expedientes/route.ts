@@ -54,7 +54,7 @@ export async function POST(request: Request) {
       jurisdiccion: body.jurisdiccion.trim(),
       fuero: body.fuero?.trim() || null,
       caratula: body.caratula?.trim() || null,
-    })
+    } as never)
     .select()
     .single();
 

@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import type { ActualizarEscritoRequest, EscritoUpdate } from "@/types";
+import type { ActualizarEscritoRequest } from "@/types";
+import type { Database, Json } from "@/types/database";
 
 type RouteContext = { params: Promise<{ id: string }> };
+type EscritoUpdate = Database["public"]["Tables"]["escritos"]["Update"];
 
 export async function GET(_request: Request, context: RouteContext) {
   const { id } = await context.params;
@@ -46,15 +48,22 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const body = (await request.json()) as ActualizarEscritoRequest;
 
-  const update: EscritoUpdate = {};
-  if (body.titulo !== undefined) update.titulo = body.titulo;
-  if (body.contenido_html !== undefined) update.contenido_html = body.contenido_html;
-  if (body.estado !== undefined) update.estado = body.estado;
-  if (body.variables !== undefined) update.variables = body.variables;
+  const patch: EscritoUpdate = {
+    ...(body.titulo !== undefined ? { titulo: body.titulo } : {}),
+    ...(body.contenido_html !== undefined ? { contenido_html: body.contenido_html } : {}),
+    ...(body.estado !== undefined ? { estado: body.estado } : {}),
+    ...(body.variables !== undefined
+      ? { variables: body.variables as Json }
+      : {}),
+  };
+
+  if (Object.keys(patch).length === 0) {
+    return NextResponse.json({ error: "Nada que actualizar" }, { status: 400 });
+  }
 
   const { data, error } = await supabase
     .from("escritos")
-    .update(update)
+    .update(patch as never)
     .eq("id", id)
     .eq("user_id", user.id)
     .select()

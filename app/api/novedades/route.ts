@@ -63,7 +63,7 @@ export async function PATCH(request: Request) {
 
   const { data, error } = await supabase
     .from("novedades")
-    .update({ leida })
+    .update({ leida } as never)
     .eq("id", id)
     .select()
     .single();

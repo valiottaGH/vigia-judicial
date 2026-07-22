@@ -48,7 +48,7 @@ export async function PATCH(request: Request) {
       domicilio_profesional: body.domicilio_profesional,
       telefono: body.telefono,
       ciudad: body.ciudad,
-    })
+    } as never)
     .eq("id", user.id)
     .select(
       "full_name, estudio_nombre, matricula, domicilio_profesional, telefono, ciudad"

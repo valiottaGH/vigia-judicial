@@ -268,14 +268,14 @@ export interface Database {
         Relationships: [];
       };
     };
-    Views: {
-      [_ in never]: never;
-    };
+    Views: Record<string, never>;
     Functions: {
       is_email_registered: {
         Args: { check_email: string };
         Returns: boolean;
       };
     };
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
   };
 }

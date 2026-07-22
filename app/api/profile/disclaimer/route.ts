@@ -31,7 +31,7 @@ export async function POST() {
         id: user.id,
         email: user.email ?? "",
         disclaimer_accepted_at: acceptedAt,
-      },
+      } as never,
       { onConflict: "id" }
     );
   } catch {
