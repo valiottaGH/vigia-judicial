@@ -35,7 +35,7 @@ export default function OnboardingForm() {
     <main className="min-h-screen flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-2xl bg-card border border-border rounded-xl p-8 shadow-sm">
         <h1 className="text-2xl font-bold text-primary mb-2">
-          Bienvenido a Vigia Judicial
+          Bienvenido a Fast Cedu
         </h1>
         <p className="text-muted mb-6">
           Antes de continuar, lee y acepta los terminos de uso.
@@ -47,10 +47,10 @@ export default function OnboardingForm() {
               Herramienta de apoyo
             </h2>
             <p className="text-muted">
-              Vigia Judicial es una herramienta para abogados que facilita la
-              redaccion de escritos, la organizacion de expedientes y la
-              generacion de actuaciones judiciales. No reemplaza el criterio
-              profesional ni los sistemas oficiales del Poder Judicial.
+              Fast Cedu es una herramienta para abogados que interpreta
+              notificaciones judiciales con IA y genera cédulas u otros
+              documentos de respuesta. No reemplaza el criterio profesional ni
+              los sistemas oficiales del Poder Judicial.
             </p>
           </section>
 
@@ -102,7 +102,7 @@ export default function OnboardingForm() {
             className="mt-1"
           />
           <span className="text-sm">
-            Lei y acepto los terminos. Entiendo que Vigia Judicial es una
+            Lei y acepto los terminos. Entiendo que Fast Cedu es una
             herramienta de apoyo y no sustituye la revision letrada ni los
             sistemas judiciales oficiales.
           </span>

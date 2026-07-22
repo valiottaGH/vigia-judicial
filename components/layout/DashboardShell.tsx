@@ -4,17 +4,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-
-const NAV = [
-  { href: "/dashboard", label: "Home", exact: true },
-  { href: "/dashboard/escritos", label: "Escritos" },
-  { href: "/dashboard/expedientes", label: "Expedientes" },
-  { href: "/dashboard/configuracion", label: "Configuracion" },
-];
+import VolverInicioLink from "@/components/layout/VolverInicioLink";
 
 const USER_LINKS = [
+  { href: "/dashboard/configuracion", label: "Configuración" },
   { href: "/dashboard/cuenta?tab=perfil", label: "Mi cuenta" },
-  { href: "/dashboard/cuenta?tab=suscripcion", label: "Suscripcion" },
 ];
 
 export default function DashboardShell({
@@ -30,12 +24,7 @@ export default function DashboardShell({
   const menuRef = useRef<HTMLDivElement>(null);
 
   const initials = userEmail.slice(0, 2).toUpperCase();
-  const isAccountActive = pathname.startsWith("/dashboard/cuenta");
-
-  function isNavActive(item: { href: string; exact?: boolean }) {
-    if (item.exact) return pathname === item.href;
-    return pathname.startsWith(item.href);
-  }
+  const isHome = pathname === "/dashboard";
 
   async function logout() {
     const supabase = createClient();
@@ -63,46 +52,30 @@ export default function DashboardShell({
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="sticky top-0 z-30 border-b border-border bg-card shadow-sm">
-        <div className="px-3 md:px-6 h-12 md:h-16 flex items-center justify-between gap-3 md:gap-4">
+        <div className="px-3 md:px-6 h-12 md:h-16 flex items-center justify-between gap-3 md:gap-4 max-w-4xl mx-auto w-full">
           <Link
             href="/dashboard"
-            className="font-bold text-primary text-base md:text-lg shrink-0 min-w-0 truncate"
+            className={`inline-flex items-center shrink-0 rounded-lg border px-2.5 py-1.5 md:px-3 md:py-2 text-sm md:text-base font-bold transition-all ${
+              isHome
+                ? "border-primary bg-primary text-white shadow-sm"
+                : "border-primary/60 bg-primary/5 text-primary hover:bg-primary/10 hover:border-primary"
+            }`}
+            aria-current={isHome ? "page" : undefined}
           >
-            Vigia Judicial
+            Fast Cedu
           </Link>
 
-          {/* Nav horizontal — desktop */}
-          <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
-            {NAV.map((item) => {
-              const active = isNavActive(item);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                    active
-                      ? "bg-primary text-white"
-                      : "text-muted hover:text-primary hover:bg-background"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* Menu usuario */}
           <div className="relative shrink-0" ref={menuRef}>
             <button
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
               className={`flex items-center gap-1 md:gap-2 pl-1.5 pr-2 py-1 md:pl-2 md:pr-3 md:py-2 rounded-lg md:rounded-xl border md:border-2 text-sm font-medium transition-all h-9 md:h-auto md:min-h-[44px] ${
                 menuOpen
-                  ? "border-primary bg-primary text-white shadow-md md:shadow-lg"
-                  : "border-primary/60 bg-primary/5 text-primary md:bg-primary/10 md:shadow-md md:ring-2 md:ring-primary/20"
+                  ? "border-primary bg-primary text-white shadow-md"
+                  : "border-primary/60 bg-primary/5 text-primary md:bg-primary/10"
               }`}
               aria-expanded={menuOpen}
-              aria-label={menuOpen ? "Cerrar menu" : "Abrir menu"}
+              aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
             >
               <span
                 className={`w-7 h-7 md:w-8 md:h-8 rounded-full text-[10px] md:text-xs font-bold flex items-center justify-center shrink-0 ${
@@ -111,11 +84,7 @@ export default function DashboardShell({
               >
                 {initials}
               </span>
-              <span className="hidden md:flex flex-col items-start leading-tight">
-                <span className="text-xs opacity-80">Menu</span>
-                <span className="text-sm">{menuOpen ? "Cerrar" : "Abrir"}</span>
-              </span>
-              <ChevronIcon open={menuOpen} className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <ChevronIcon open={menuOpen} className="w-3.5 h-3.5 md:w-4 md:h-4 hidden md:block" />
             </button>
 
             {menuOpen && (
@@ -123,31 +92,11 @@ export default function DashboardShell({
                 <p className="px-4 py-2 text-xs text-muted truncate border-b border-border mb-1">
                   {userEmail}
                 </p>
-
-                {/* Nav movil dentro del dropdown */}
-                <div className="md:hidden px-2 pb-2 mb-2 border-b border-border space-y-1">
-                  {NAV.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`block px-3 py-2 rounded-lg text-sm ${
-                        isNavActive(item)
-                          ? "bg-primary text-white"
-                          : "text-muted hover:bg-background"
-                      }`}
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                </div>
-
                 {USER_LINKS.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`block px-4 py-2 text-sm hover:bg-background ${
-                      isAccountActive ? "text-primary font-medium" : "text-muted"
-                    }`}
+                    className="block px-4 py-2 text-sm text-muted hover:bg-background hover:text-primary"
                   >
                     {item.label}
                   </Link>
@@ -157,7 +106,7 @@ export default function DashboardShell({
                   onClick={() => void logout()}
                   className="w-full text-left px-4 py-2 text-sm text-danger hover:bg-red-50"
                 >
-                  Cerrar sesion
+                  Cerrar sesión
                 </button>
               </div>
             )}
@@ -165,7 +114,12 @@ export default function DashboardShell({
         </div>
       </header>
 
-      <main className="flex-1 p-4 md:p-8">{children}</main>
+      <main className="flex-1 p-4 md:p-8">
+        <div className="max-w-4xl mx-auto w-full space-y-4">
+          {!isHome && <VolverInicioLink />}
+          {children}
+        </div>
+      </main>
     </div>
   );
 }

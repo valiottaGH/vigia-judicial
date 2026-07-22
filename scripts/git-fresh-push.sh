@@ -13,7 +13,7 @@ if git diff --cached --name-only | grep -q '^node_modules/'; then
 fi
 
 echo "Archivos a commitear: $(git diff --cached --name-only | wc -l)"
-git commit -m "Initial commit - Vigia Judicial"
+git commit -m "Initial commit - Fast Cedu"
 git branch -M main
 git remote remove origin 2>/dev/null || true
 git remote add origin https://github.com/valiottaGH/vigia-judicial.git

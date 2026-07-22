@@ -21,6 +21,10 @@ export default function ConfigMembreteForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.full_name.trim() || !form.matricula.trim()) {
+      setMessage("Completá nombre y matrícula.");
+      return;
+    }
     setLoading(true);
     setMessage(null);
 
@@ -40,9 +44,9 @@ export default function ConfigMembreteForm({
   }
 
   const fields = [
-    { key: "full_name", label: "Nombre completo (abogado/a)" },
+    { key: "full_name", label: "Nombre completo (abogado/a) *" },
     { key: "estudio_nombre", label: "Nombre del estudio" },
-    { key: "matricula", label: "Matricula CPASF" },
+    { key: "matricula", label: "Matrícula CPASF *" },
     { key: "domicilio_profesional", label: "Domicilio profesional" },
     { key: "telefono", label: "Telefono" },
     { key: "ciudad", label: "Ciudad" },
@@ -51,7 +55,7 @@ export default function ConfigMembreteForm({
   return (
     <form onSubmit={handleSubmit} className="max-w-xl space-y-4">
       <p className="text-sm text-muted">
-        Estos datos aparecen en las plantillas de escritos y en el membrete del PDF.
+        Nombre y matrícula son obligatorios para generar cédulas con IA.
       </p>
 
       {fields.map(({ key, label }) => (
@@ -60,6 +64,7 @@ export default function ConfigMembreteForm({
           <input
             value={form[key]}
             onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+            required={key === "full_name" || key === "matricula"}
             className="w-full px-3 py-2 border border-border rounded-lg text-sm"
           />
         </div>

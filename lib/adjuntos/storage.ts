@@ -1,8 +1,10 @@
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
   ADJUNTOS_BUCKET,
-  isAllowedAdjuntoMime,
+  INVALID_ADJUNTO_MESSAGE,
   MAX_ADJUNTO_BYTES,
+  resolveAdjuntoMime,
+  type AllowedAdjuntoMime,
 } from "./constants";
 import { sanitizeFilename } from "@/lib/actuaciones/zip";
 
@@ -21,12 +23,10 @@ export class AdjuntoError extends Error {
   }
 }
 
-export function validateAdjuntoFile(file: File): void {
-  if (!isAllowedAdjuntoMime(file.type)) {
-    throw new AdjuntoError(
-      "Solo se permiten archivos PDF o Word (.pdf, .doc, .docx)",
-      "INVALID_TYPE"
-    );
+export function validateAdjuntoFile(file: File): AllowedAdjuntoMime {
+  const mime = resolveAdjuntoMime(file);
+  if (!mime) {
+    throw new AdjuntoError(INVALID_ADJUNTO_MESSAGE, "INVALID_TYPE");
   }
   if (file.size > MAX_ADJUNTO_BYTES) {
     throw new AdjuntoError(
@@ -37,6 +37,7 @@ export function validateAdjuntoFile(file: File): void {
   if (file.size === 0) {
     throw new AdjuntoError("El archivo está vacío", "INVALID_TYPE");
   }
+  return mime;
 }
 
 export async function uploadAdjuntoToStorage(input: {
@@ -45,7 +46,7 @@ export async function uploadAdjuntoToStorage(input: {
   adjuntoId: string;
   file: File;
 }): Promise<string> {
-  validateAdjuntoFile(input.file);
+  const mime = validateAdjuntoFile(input.file);
 
   const safeName = sanitizeFilename(input.file.name);
   const storagePath = `${input.userId}/${input.expedienteId}/${input.adjuntoId}_${safeName}`;
@@ -56,7 +57,7 @@ export async function uploadAdjuntoToStorage(input: {
   const { error } = await admin.storage
     .from(ADJUNTOS_BUCKET)
     .upload(storagePath, buffer, {
-      contentType: input.file.type,
+      contentType: mime,
       upsert: false,
     });
 

@@ -8,18 +8,7 @@ export type ExpedienteAdjunto =
 export type ExpedienteInsert =
   Database["public"]["Tables"]["expedientes"]["Insert"];
 
-export interface CrearExpedienteForm {
-  numero: string;
-  jurisdiccion: string;
-  fuero?: string;
-  caratula?: string;
-}
-
-export type Escrito = Database["public"]["Tables"]["escritos"]["Row"];
-export type EscritoInsert = Database["public"]["Tables"]["escritos"]["Insert"];
-export type EscritoUpdate = Database["public"]["Tables"]["escritos"]["Update"];
-
-/** Datos del membrete del abogado (profiles + campos de escritos). */
+/** Datos del membrete del abogado (profiles). */
 export interface MembreteProfile {
   full_name: string | null;
   estudio_nombre: string | null;
@@ -27,21 +16,6 @@ export interface MembreteProfile {
   domicilio_profesional: string | null;
   telefono: string | null;
   ciudad: string | null;
-}
-
-export interface CrearEscritoRequest {
-  titulo: string;
-  tipo: string;
-  contenido_html: string;
-  variables?: Record<string, string>;
-  expediente_id?: string | null;
-}
-
-export interface ActualizarEscritoRequest {
-  titulo?: string;
-  contenido_html?: string;
-  estado?: "borrador" | "finalizado";
-  variables?: Record<string, string>;
 }
 
 export interface ActualizarMembreteRequest {

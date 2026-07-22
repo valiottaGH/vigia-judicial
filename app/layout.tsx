@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Vigía Judicial",
-  description: "Gestion juridica: escritos, expedientes y mas",
+  title: "Fast Cedu",
+  description: "Generá cédulas judiciales con IA a partir de notificaciones del juzgado",
 };
 
 export default function RootLayout({

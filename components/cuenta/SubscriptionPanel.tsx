@@ -24,9 +24,9 @@ export default function SubscriptionPanel({
   const isPro = plan === "pro" && status === "active";
 
   function contactUpgrade() {
-    const subject = encodeURIComponent("Vigia Judicial — Plan Profesional");
+    const subject = encodeURIComponent("Fast Cedu — Plan Profesional");
     const body = encodeURIComponent(
-      "Hola, quiero activar el plan Profesional en Vigia Judicial.\n\nMi email de cuenta: "
+      "Hola, quiero activar el plan Profesional en Fast Cedu.\n\nMi email de cuenta: "
     );
     window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
   }

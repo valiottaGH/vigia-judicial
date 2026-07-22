@@ -257,6 +257,7 @@ export interface Database {
           zip_url: string | null;
           manifest: Json;
           documentos_count: number;
+          source_content_hash: string | null;
           created_at: string;
         };
         Insert: {
@@ -272,6 +273,7 @@ export interface Database {
           zip_url?: string | null;
           manifest?: Json;
           documentos_count?: number;
+          source_content_hash?: string | null;
           created_at?: string;
         };
         Update: {
@@ -287,6 +289,7 @@ export interface Database {
           zip_url?: string | null;
           manifest?: Json;
           documentos_count?: number;
+          source_content_hash?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -321,6 +324,81 @@ export interface Database {
           mime_type?: string;
           tamano_bytes?: number;
           created_at?: string;
+        };
+        Relationships: [];
+      };
+      analisis_plantillas: {
+        Row: {
+          id: string;
+          user_id: string;
+          nombre: string;
+          campos: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          nombre: string;
+          campos?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          nombre?: string;
+          campos?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      documento_analisis: {
+        Row: {
+          id: string;
+          user_id: string;
+          nombre: string;
+          expediente_id: string | null;
+          plantilla_id: string | null;
+          plantilla_key: string | null;
+          campos: Json;
+          adjunto_ids: string[];
+          resultado: Json | null;
+          estado: "borrador" | "procesando" | "completado" | "error";
+          error_mensaje: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          nombre: string;
+          expediente_id?: string | null;
+          plantilla_id?: string | null;
+          plantilla_key?: string | null;
+          campos?: Json;
+          adjunto_ids?: string[];
+          resultado?: Json | null;
+          estado?: "borrador" | "procesando" | "completado" | "error";
+          error_mensaje?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          nombre?: string;
+          expediente_id?: string | null;
+          plantilla_id?: string | null;
+          plantilla_key?: string | null;
+          campos?: Json;
+          adjunto_ids?: string[];
+          resultado?: Json | null;
+          estado?: "borrador" | "procesando" | "completado" | "error";
+          error_mensaje?: string | null;
+          created_at?: string;
+          updated_at?: string;
         };
         Relationships: [];
       };

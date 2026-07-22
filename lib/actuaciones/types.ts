@@ -89,6 +89,7 @@ export interface ManifestPaquete {
 export interface PaqueteJudicial {
   actuacion_id: string;
   zip_url: string;
+  zip_filename: string;
   manifest: ManifestPaquete;
   documentos: DocumentoGenerado[];
   jurisdiccion: string;
@@ -139,6 +140,7 @@ export interface ActuacionGeneradaResponse {
   documentos_count: number;
   resolucion: Resolucion;
   zip_url: string;
+  zip_filename: string;
   manifest: ManifestPaquete;
   created_at: string;
   destinatarios: Array<{

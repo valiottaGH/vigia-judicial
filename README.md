@@ -1,4 +1,4 @@
-# Vigía Judicial
+# Fast Cedu
 
 Herramienta para **abogados**: redactar escritos judiciales con plantillas, editor rich-text, export PDF y borradores con IA.
 

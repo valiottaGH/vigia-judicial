@@ -24,7 +24,7 @@
 
 **Authentication → URL Configuration**
 
-- Site URL: tu dominio (ej. `https://vigia-judicial.vercel.app`)
+- Site URL: tu dominio (ej. `https://fast-cedu.vercel.app`)
 - Redirect URLs:
   ```
   https://tu-app.vercel.app/auth/callback

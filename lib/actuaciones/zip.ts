@@ -1,5 +1,5 @@
 import JSZip from "jszip";
-import type { ManifestPaquete } from "./types";
+import type { TipoActuacion } from "./types";
 import { ActuacionError } from "./types";
 
 export interface ZipEntry {
@@ -7,19 +7,33 @@ export interface ZipEntry {
   data: Uint8Array | string;
 }
 
-/** Crea buffer ZIP con manifest.json incluido. */
-export async function createZipBuffer(
-  entries: ZipEntry[],
-  manifest: ManifestPaquete
-): Promise<Uint8Array> {
+/** Nombre claro para el ZIP descargable. */
+export function buildPaqueteZipFilename(
+  numeroExpediente: string,
+  tipo: TipoActuacion
+): string {
+  const num = sanitizeFilename(numeroExpediente.replace(/\s+/g, "-"));
+  const tipoLabel =
+    tipo === "cedula"
+      ? "Cedulas"
+      : tipo === "oficio"
+        ? "Oficios"
+        : tipo === "mandamiento"
+          ? "Mandamientos"
+          : tipo === "notificacion_electronica"
+            ? "Notificaciones"
+            : "Documentos";
+  return `${tipoLabel}_Exp_${num}.zip`;
+}
+
+/** Crea buffer ZIP solo con los documentos generados. */
+export async function createZipBuffer(entries: ZipEntry[]): Promise<Uint8Array> {
   try {
     const zip = new JSZip();
 
     for (const entry of entries) {
       zip.file(entry.path, entry.data);
     }
-
-    zip.file("manifest.json", JSON.stringify(manifest, null, 2));
 
     const buffer = await zip.generateAsync({
       type: "uint8array",
@@ -45,13 +59,16 @@ export function sanitizeFilename(name: string): string {
 }
 
 export function buildDocumentFilename(
-  prefix: string,
-  index: number,
+  tipoLabel: string,
   apellido: string,
   nombre: string,
-  ext: string
+  ext: string,
+  index?: number
 ): string {
-  const slug = sanitizeFilename(`${apellido}_${nombre}`.trim() || "destinatario");
-  const num = String(index).padStart(3, "0");
-  return `${prefix}_${num}_${slug}.${ext}`;
+  const destinatario = sanitizeFilename(
+    `${apellido} ${nombre}`.trim() || "Destinatario"
+  );
+  const suffix =
+    index !== undefined && index > 1 ? ` (${index})` : "";
+  return `${tipoLabel} - ${destinatario}${suffix}.${ext}`;
 }

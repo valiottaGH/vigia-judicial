@@ -1,4 +1,4 @@
-# Vigia Judicial — guia del proyecto
+# Fast Cedu — guia del proyecto
 
 SaaS para estudios juridicos en **Santa Fe (Argentina)**.
 

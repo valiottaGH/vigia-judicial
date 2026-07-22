@@ -53,3 +53,57 @@ body {
   padding-left: 1.25rem;
   margin-bottom: 0.75rem;
 }
+
+/* Hover sutil en botones y controles clickeables con aspecto de botón */
+@layer base {
+  button:not(:disabled),
+  label.cursor-pointer.rounded-lg,
+  a.rounded-lg,
+  a.rounded-xl {
+    transition:
+      transform 0.15s ease,
+      box-shadow 0.15s ease,
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      color 0.15s ease,
+      opacity 0.15s ease;
+  }
+
+  button:not(:disabled):hover,
+  label.cursor-pointer.rounded-lg:hover,
+  a.rounded-lg:hover,
+  a.rounded-xl:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgb(15 23 42 / 0.08);
+  }
+
+  button:not(:disabled):active,
+  label.cursor-pointer.rounded-lg:active,
+  a.rounded-lg:active,
+  a.rounded-xl:active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button:not(:disabled),
+  label.cursor-pointer.rounded-lg,
+  a.rounded-lg,
+  a.rounded-xl {
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease,
+      opacity 0.15s ease;
+  }
+
+  button:not(:disabled):hover,
+  label.cursor-pointer.rounded-lg:hover,
+  a.rounded-lg:hover,
+  a.rounded-xl:hover,
+  button:not(:disabled):active,
+  label.cursor-pointer.rounded-lg:active,
+  a.rounded-lg:active,
+  a.rounded-xl:active {
+    transform: none;
+    box-shadow: none;
+  }
+}

@@ -1,14 +1,12 @@
 import type { Json } from "@/types/database";
 import { createServiceClient } from "@/lib/supabase/admin";
-import { downloadAdjuntoFromStorage } from "@/lib/adjuntos/storage";
-import type { ExpedienteAdjunto } from "@/lib/adjuntos/types";
 import { getJurisdictionTemplate, normalizeJurisdiccionKey } from "@/lib/jurisdicciones";
 import type { PlantillaVariables } from "@/lib/jurisdicciones/types";
 import { documentoToDocx } from "./docx";
-import { documentoToPdfSafe } from "./pdf";
-import { renderDocumento, renderEscritoAcompanamiento } from "./templates";
+import { renderDocumento } from "./templates";
 import {
   buildDocumentFilename,
+  buildPaqueteZipFilename,
   createZipBuffer,
   type ZipEntry,
 } from "./zip";
@@ -25,7 +23,6 @@ import type {
 } from "./types";
 import {
   ActuacionError,
-  TIPOS_ACTUACION_LABELS,
   type ExpedienteActuaciones,
   type TipoActuacion,
 } from "./types";
@@ -102,23 +99,22 @@ async function generarDocumentoIndividual(
 ): Promise<DocumentoGenerado> {
   const doc = renderDocumento(tipo, template, variables);
   const docx = await documentoToDocx(doc);
-  const { pdf, html } = await documentoToPdfSafe(doc);
 
-  const prefix =
+  const tipoLabel =
     tipo === "cedula"
-      ? "cedula"
+      ? "Cedula"
       : tipo === "oficio"
-        ? "oficio"
+        ? "Oficio"
         : tipo === "mandamiento"
-          ? "mandamiento"
-          : "notificacion";
+          ? "Mandamiento"
+          : "Notificacion";
 
   const nombre_base = buildDocumentFilename(
-    prefix,
-    index,
+    tipoLabel,
     parte.apellido,
     parte.nombre,
-    "docx"
+    "docx",
+    index
   ).replace(/\.docx$/, "");
 
   return {
@@ -127,8 +123,8 @@ async function generarDocumentoIndividual(
     destinatario_nombre: parteNombre(parte),
     tipo,
     docx,
-    pdf,
-    html_fallback: pdf ? null : html,
+    pdf: null,
+    html_fallback: null,
   };
 }
 
@@ -216,17 +212,6 @@ export async function generarPaqueteJudicial(
     documentos.push(doc);
   }
 
-  const escritoDoc = renderEscritoAcompanamiento(template, {
-    ...variablesBase,
-    destinatario: "",
-    domicilio: "",
-    tipo_actuacion: TIPOS_ACTUACION_LABELS[tipo],
-    cantidad_documentos: documentos.length,
-  });
-
-  const escritoDocx = await documentoToDocx(escritoDoc);
-  const escritoPdfResult = await documentoToPdfSafe(escritoDoc);
-
   const manifestDocs: ManifestDocumento[] = [];
   const zipEntries: ZipEntry[] = [];
 
@@ -239,84 +224,6 @@ export async function generarPaqueteJudicial(
       destinatario: doc.destinatario_nombre,
       formato: "docx",
     });
-
-    if (doc.pdf) {
-      const pdfName = `${doc.nombre_base}.pdf`;
-      zipEntries.push({ path: pdfName, data: doc.pdf });
-      manifestDocs.push({
-        nombre: pdfName,
-        tipo: doc.tipo,
-        destinatario: doc.destinatario_nombre,
-        formato: "pdf",
-      });
-    } else if (doc.html_fallback) {
-      const htmlName = `${doc.nombre_base}.html`;
-      zipEntries.push({ path: htmlName, data: doc.html_fallback });
-      manifestDocs.push({
-        nombre: htmlName,
-        tipo: doc.tipo,
-        destinatario: doc.destinatario_nombre,
-        formato: "html",
-      });
-    }
-  }
-
-  zipEntries.push({ path: "escrito_acompanamiento.docx", data: escritoDocx });
-  manifestDocs.push({
-    nombre: "escrito_acompanamiento.docx",
-    tipo: "escrito_acompanamiento",
-    destinatario: "Tribunal",
-    formato: "docx",
-  });
-
-  if (escritoPdfResult.pdf) {
-    zipEntries.push({
-      path: "escrito_acompanamiento.pdf",
-      data: escritoPdfResult.pdf,
-    });
-    manifestDocs.push({
-      nombre: "escrito_acompanamiento.pdf",
-      tipo: "escrito_acompanamiento",
-      destinatario: "Tribunal",
-      formato: "pdf",
-    });
-  } else {
-    zipEntries.push({
-      path: "escrito_acompanamiento.html",
-      data: escritoPdfResult.html,
-    });
-    manifestDocs.push({
-      nombre: "escrito_acompanamiento.html",
-      tipo: "escrito_acompanamiento",
-      destinatario: "Tribunal",
-      formato: "html",
-    });
-  }
-
-  let adjuntosCount = 0;
-  if (request.adjunto_ids && request.adjunto_ids.length > 0) {
-    const admin = createServiceClient();
-    const { data: adjuntosRows } = await admin
-      .from("expediente_adjuntos")
-      .select("*")
-      .eq("expediente_id", expediente.id)
-      .eq("user_id", userId)
-      .in("id", request.adjunto_ids);
-
-    const adjuntos = (adjuntosRows ?? []) as ExpedienteAdjunto[];
-
-    for (const adj of adjuntos) {
-      const bytes = await downloadAdjuntoFromStorage(adj.storage_path);
-      const zipName = `adjuntos/${adj.nombre_original}`;
-      zipEntries.push({ path: zipName, data: bytes });
-      manifestDocs.push({
-        nombre: zipName,
-        tipo: "adjunto",
-        destinatario: adj.nombre_original,
-        formato: adj.mime_type.includes("pdf") ? "pdf" : "doc",
-      });
-      adjuntosCount += 1;
-    }
   }
 
   const generadoEn = new Date().toISOString();
@@ -333,7 +240,8 @@ export async function generarPaqueteJudicial(
     documentos: manifestDocs,
   };
 
-  const zipBuffer = await createZipBuffer(zipEntries, manifest);
+  const zipBuffer = await createZipBuffer(zipEntries);
+  const zipFilename = buildPaqueteZipFilename(expediente.numero, tipo);
 
   const actuacionId = crypto.randomUUID();
   const zipPath = `${userId}/${expediente.id}/${actuacionId}.zip`;
@@ -381,7 +289,7 @@ export async function generarPaqueteJudicial(
       zip_path: zipPath,
       zip_url: signedUrl,
       manifest: manifest as unknown as Json,
-      documentos_count: documentos.length + 1 + adjuntosCount,
+      documentos_count: documentos.length,
     } as never);
 
   if (insertError) {
@@ -394,12 +302,13 @@ export async function generarPaqueteJudicial(
   return {
     actuacion_id: actuacionId,
     zip_url: signedUrl,
+    zip_filename: zipFilename,
     manifest,
     documentos,
     jurisdiccion: expediente.jurisdiccion,
     plantilla_key: plantillaKey,
     plantilla_nombre: template.nombre,
-    cantidad_documentos: documentos.length + 1 + adjuntosCount,
+    cantidad_documentos: documentos.length,
     generado_en: generadoEn,
   };
 }

@@ -141,7 +141,7 @@ export default function LoginForm() {
     <main className="min-h-screen flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary">Vigia Judicial</h1>
+          <h1 className="text-3xl font-bold text-primary">Fast Cedu</h1>
           <p className="text-muted mt-2">
             {isSignUp ? "Crea tu cuenta" : "Inicia sesion en tu cuenta"}
           </p>
