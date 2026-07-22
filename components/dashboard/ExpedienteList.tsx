@@ -1,10 +1,17 @@
-import type { ExpedienteConNovedades } from "@/types";
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import AdjuntosPanel from "@/components/adjuntos/AdjuntosPanel";
+import type { Expediente } from "@/types";
 
 interface ExpedienteListProps {
-  expedientes: ExpedienteConNovedades[];
+  expedientes: Expediente[];
 }
 
 export default function ExpedienteList({ expedientes }: ExpedienteListProps) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   if (expedientes.length === 0) {
     return (
       <div className="bg-card border border-border rounded-xl p-6">
@@ -13,7 +20,7 @@ export default function ExpedienteList({ expedientes }: ExpedienteListProps) {
         </h2>
         <p className="text-sm text-muted">
           Todavía no agregaste expedientes. Usá el formulario de arriba para
-          empezar a monitorear.
+          empezar.
         </p>
       </div>
     );
@@ -25,12 +32,13 @@ export default function ExpedienteList({ expedientes }: ExpedienteListProps) {
         Mis expedientes ({expedientes.length})
       </h2>
       <ul className="space-y-3">
-        {expedientes.map((exp) => (
-          <li
-            key={exp.id}
-            className="p-4 border border-border rounded-lg hover:border-primary/30 transition"
-          >
-            <div className="flex items-start justify-between gap-2">
+        {expedientes.map((exp) => {
+          const expanded = expandedId === exp.id;
+          return (
+            <li
+              key={exp.id}
+              className="p-4 border border-border rounded-lg hover:border-primary/30 transition"
+            >
               <div>
                 <p className="font-medium text-sm">{exp.numero}</p>
                 <p className="text-xs text-muted mt-0.5">
@@ -43,20 +51,29 @@ export default function ExpedienteList({ expedientes }: ExpedienteListProps) {
                   </p>
                 )}
               </div>
-              {exp.novedades_no_leidas > 0 && (
-                <span className="shrink-0 px-2 py-0.5 bg-accent/20 text-accent text-xs font-medium rounded-full">
-                  {exp.novedades_no_leidas} nueva(s)
-                </span>
+              <div className="flex flex-wrap items-center gap-3 mt-3">
+                <Link
+                  href={`/dashboard/expedientes/${exp.id}/actuaciones`}
+                  className="text-xs font-medium text-primary hover:underline"
+                >
+                  Generar actuaciones →
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setExpandedId(expanded ? null : exp.id)}
+                  className="text-xs text-muted hover:text-primary"
+                >
+                  {expanded ? "Ocultar archivos" : "Ver archivos adjuntos"}
+                </button>
+              </div>
+              {expanded && (
+                <div className="mt-4 pt-4 border-t border-border">
+                  <AdjuntosPanel expedienteId={exp.id} compact />
+                </div>
               )}
-            </div>
-            {exp.ultima_consulta && (
-              <p className="text-xs text-muted mt-2">
-                Última consulta:{" "}
-                {new Date(exp.ultima_consulta).toLocaleString("es-AR")}
-              </p>
-            )}
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

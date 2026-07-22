@@ -1,11 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import ExpedientesClient from "@/components/dashboard/ExpedientesClient";
-import type { Expediente, ExpedienteConNovedades, Novedad } from "@/types";
+import type { Expediente } from "@/types";
 
-async function getExpedientes(userId: string): Promise<{
-  expedientes: ExpedienteConNovedades[];
-  totalNoLeidas: number;
-}> {
+async function getExpedientes(userId: string): Promise<Expediente[]> {
   const supabase = await createClient();
 
   const { data: expedientes, error } = await supabase
@@ -15,34 +12,10 @@ async function getExpedientes(userId: string): Promise<{
     .order("created_at", { ascending: false });
 
   if (error || !expedientes) {
-    return { expedientes: [], totalNoLeidas: 0 };
+    return [];
   }
 
-  const ids = expedientes.map((e) => e.id);
-  let novedades: Novedad[] = [];
-
-  if (ids.length > 0) {
-    const { data } = await supabase
-      .from("novedades")
-      .select("*")
-      .in("expediente_id", ids)
-      .order("fecha", { ascending: false });
-    novedades = data ?? [];
-  }
-
-  const conNovedades: ExpedienteConNovedades[] = expedientes.map((exp) => {
-    const expNovedades = novedades.filter((n) => n.expediente_id === exp.id);
-    return {
-      ...(exp as Expediente),
-      novedades: expNovedades,
-      novedades_no_leidas: expNovedades.filter((n) => !n.leida).length,
-    };
-  });
-
-  return {
-    expedientes: conNovedades,
-    totalNoLeidas: novedades.filter((n) => !n.leida).length,
-  };
+  return expedientes as Expediente[];
 }
 
 export default async function ExpedientesPage() {
@@ -51,9 +24,7 @@ export default async function ExpedientesPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { expedientes, totalNoLeidas } = await getExpedientes(user!.id);
+  const expedientes = await getExpedientes(user!.id);
 
-  return (
-    <ExpedientesClient expedientes={expedientes} totalNoLeidas={totalNoLeidas} />
-  );
+  return <ExpedientesClient expedientes={expedientes} />;
 }

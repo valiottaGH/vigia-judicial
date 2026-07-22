@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { CrearExpedienteForm } from "@/types";
+import { ADJUNTO_ACCEPT } from "@/lib/adjuntos/constants";
 
 const JURISDICCIONES = [
   "Santa Fe",
@@ -23,8 +24,24 @@ export default function ExpedienteForm({ onSuccess }: ExpedienteFormProps) {
     fuero: "",
     caratula: "",
   });
+  const [archivos, setArchivos] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function subirAdjuntos(expedienteId: string, files: File[]) {
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`/api/expedientes/${expedienteId}/adjuntos`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? `Error al subir ${file.name}`);
+      }
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -45,7 +62,22 @@ export default function ExpedienteForm({ onSuccess }: ExpedienteFormProps) {
         return;
       }
 
-      setForm({ numero: "", jurisdiccion: "CABA", fuero: "", caratula: "" });
+      if (archivos.length > 0 && data.id) {
+        try {
+          await subirAdjuntos(data.id as string, archivos);
+        } catch (uploadErr) {
+          setError(
+            uploadErr instanceof Error
+              ? uploadErr.message
+              : "Expediente creado pero falló la subida de archivos"
+          );
+          onSuccess();
+          return;
+        }
+      }
+
+      setForm({ numero: "", jurisdiccion: "Santa Fe", fuero: "", caratula: "" });
+      setArchivos([]);
       onSuccess();
     } catch {
       setError("Error de conexión");
@@ -128,6 +160,32 @@ export default function ExpedienteForm({ onSuccess }: ExpedienteFormProps) {
             placeholder="Ej: Pérez c/ Gómez s/ Daños"
             className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
+        </div>
+
+        <div>
+          <label htmlFor="adjuntos-nuevo" className="block text-sm font-medium mb-1">
+            Archivos adjuntos (opcional)
+          </label>
+          <input
+            id="adjuntos-nuevo"
+            type="file"
+            accept={ADJUNTO_ACCEPT}
+            multiple
+            onChange={(e) =>
+              setArchivos(e.target.files ? Array.from(e.target.files) : [])
+            }
+            className="w-full text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-border file:text-sm file:bg-background"
+          />
+          <p className="text-xs text-muted mt-1">
+            PDF o Word — máx. 15 MB por archivo
+          </p>
+          {archivos.length > 0 && (
+            <ul className="mt-2 text-xs text-muted space-y-0.5">
+              {archivos.map((f) => (
+                <li key={f.name}>{f.name}</li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <button

@@ -2,17 +2,11 @@ import type { Database } from "./database";
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type Expediente = Database["public"]["Tables"]["expedientes"]["Row"];
-export type Novedad = Database["public"]["Tables"]["novedades"]["Row"];
+export type ExpedienteAdjunto =
+  Database["public"]["Tables"]["expediente_adjuntos"]["Row"];
 
 export type ExpedienteInsert =
   Database["public"]["Tables"]["expedientes"]["Insert"];
-export type NovedadInsert = Database["public"]["Tables"]["novedades"]["Insert"];
-
-/** Expediente con novedades cargadas para listados del dashboard. */
-export interface ExpedienteConNovedades extends Expediente {
-  novedades: Novedad[];
-  novedades_no_leidas: number;
-}
 
 export interface CrearExpedienteForm {
   numero: string;

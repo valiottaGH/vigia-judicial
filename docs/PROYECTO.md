@@ -7,7 +7,7 @@ SaaS para estudios juridicos en **Santa Fe (Argentina)**.
 | Modulo | Ruta | Descripcion |
 |--------|------|-------------|
 | **Escritos** | `/dashboard/escritos` | Plantillas, editor, PDF, generacion con IA |
-| **Expedientes** | `/dashboard/expedientes` | Carga manual de causas y notas de novedad |
+| **Expedientes** | `/dashboard/expedientes` | Carga de causas y generacion masiva de actuaciones |
 | **Configuracion** | `/dashboard/configuracion` | Membrete del estudio (PDF y plantillas) |
 | **Cuenta** | `/dashboard/cuenta` | Perfil, contrasena, suscripcion |
 

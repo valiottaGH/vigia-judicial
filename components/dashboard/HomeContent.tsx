@@ -18,10 +18,10 @@ const SECTIONS = [
     title: "Expedientes",
     href: "/dashboard/expedientes",
     description:
-      "Registro manual de causas y novedades. Util para llevar un historial propio.",
+      "Registro de causas y generacion masiva de actuaciones (cedulas, oficios, etc.).",
     steps: [
       "Agrega expedientes con numero, jurisdiccion y caratula.",
-      "Consulta el feed de novedades asociadas a cada causa.",
+      "Entra a Generar actuaciones en cada causa para crear el paquete de documentos.",
     ],
   },
   {

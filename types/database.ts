@@ -74,6 +74,7 @@ export interface Database {
           jurisdiccion: string;
           fuero: string | null;
           caratula: string | null;
+          juzgado: string | null;
           cisfe_id: string | null;
           activo: boolean;
           ultima_consulta: string | null;
@@ -87,6 +88,7 @@ export interface Database {
           jurisdiccion: string;
           fuero?: string | null;
           caratula?: string | null;
+          juzgado?: string | null;
           cisfe_id?: string | null;
           activo?: boolean;
           ultima_consulta?: string | null;
@@ -100,74 +102,12 @@ export interface Database {
           jurisdiccion?: string;
           fuero?: string | null;
           caratula?: string | null;
+          juzgado?: string | null;
           cisfe_id?: string | null;
           activo?: boolean;
           ultima_consulta?: string | null;
           created_at?: string;
           updated_at?: string;
-        };
-        Relationships: [];
-      };
-      novedades: {
-        Row: {
-          id: string;
-          expediente_id: string;
-          cisfe_novedad_id: string;
-          fecha: string;
-          tipo: string;
-          descripcion: string;
-          detalle: Json;
-          leida: boolean;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          expediente_id: string;
-          cisfe_novedad_id: string;
-          fecha: string;
-          tipo: string;
-          descripcion: string;
-          detalle?: Json;
-          leida?: boolean;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          expediente_id?: string;
-          cisfe_novedad_id?: string;
-          fecha?: string;
-          tipo?: string;
-          descripcion?: string;
-          detalle?: Json;
-          leida?: boolean;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-      consultas_log: {
-        Row: {
-          id: string;
-          expediente_id: string;
-          status: "ok" | "error" | "sin_novedades";
-          novedades_encontradas: number;
-          error_message: string | null;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          expediente_id: string;
-          status: "ok" | "error" | "sin_novedades";
-          novedades_encontradas?: number;
-          error_message?: string | null;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          expediente_id?: string;
-          status?: "ok" | "error" | "sin_novedades";
-          novedades_encontradas?: number;
-          error_message?: string | null;
-          created_at?: string;
         };
         Relationships: [];
       };
@@ -201,30 +141,6 @@ export interface Database {
           expires_at?: string | null;
           created_at?: string;
           updated_at?: string;
-        };
-        Relationships: [];
-      };
-      notification_log: {
-        Row: {
-          id: string;
-          user_id: string;
-          tipo: "novedad" | "sesion_expirada";
-          novedades_count: number;
-          sent_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          tipo: "novedad" | "sesion_expirada";
-          novedades_count?: number;
-          sent_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          tipo?: "novedad" | "sesion_expirada";
-          novedades_count?: number;
-          sent_at?: string;
         };
         Relationships: [];
       };
@@ -264,6 +180,147 @@ export interface Database {
           variables?: Json;
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      partes_expediente: {
+        Row: {
+          id: string;
+          expediente_id: string;
+          nombre: string;
+          apellido: string;
+          rol: "actor" | "demandado" | "tercero" | "organismo";
+          domicilio: string | null;
+          documento: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          expediente_id: string;
+          nombre: string;
+          apellido?: string;
+          rol: "actor" | "demandado" | "tercero" | "organismo";
+          domicilio?: string | null;
+          documento?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          expediente_id?: string;
+          nombre?: string;
+          apellido?: string;
+          rol?: "actor" | "demandado" | "tercero" | "organismo";
+          domicilio?: string | null;
+          documento?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      resoluciones: {
+        Row: {
+          id: string;
+          expediente_id: string;
+          fecha: string;
+          tipo: string;
+          texto: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          expediente_id: string;
+          fecha: string;
+          tipo?: string;
+          texto: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          expediente_id?: string;
+          fecha?: string;
+          tipo?: string;
+          texto?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      actuaciones_generadas: {
+        Row: {
+          id: string;
+          expediente_id: string;
+          user_id: string;
+          tipo_actuacion: string;
+          resolucion_id: string | null;
+          instruccion: string | null;
+          jurisdiccion: string;
+          plantilla_key: string;
+          zip_path: string;
+          zip_url: string | null;
+          manifest: Json;
+          documentos_count: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          expediente_id: string;
+          user_id: string;
+          tipo_actuacion: string;
+          resolucion_id?: string | null;
+          instruccion?: string | null;
+          jurisdiccion: string;
+          plantilla_key: string;
+          zip_path: string;
+          zip_url?: string | null;
+          manifest?: Json;
+          documentos_count?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          expediente_id?: string;
+          user_id?: string;
+          tipo_actuacion?: string;
+          resolucion_id?: string | null;
+          instruccion?: string | null;
+          jurisdiccion?: string;
+          plantilla_key?: string;
+          zip_path?: string;
+          zip_url?: string | null;
+          manifest?: Json;
+          documentos_count?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      expediente_adjuntos: {
+        Row: {
+          id: string;
+          expediente_id: string;
+          user_id: string;
+          nombre_original: string;
+          storage_path: string;
+          mime_type: string;
+          tamano_bytes: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          expediente_id: string;
+          user_id: string;
+          nombre_original: string;
+          storage_path: string;
+          mime_type: string;
+          tamano_bytes: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          expediente_id?: string;
+          user_id?: string;
+          nombre_original?: string;
+          storage_path?: string;
+          mime_type?: string;
+          tamano_bytes?: number;
+          created_at?: string;
         };
         Relationships: [];
       };

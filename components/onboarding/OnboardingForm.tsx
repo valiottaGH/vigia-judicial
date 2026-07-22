@@ -47,31 +47,21 @@ export default function OnboardingForm() {
               Herramienta de apoyo
             </h2>
             <p className="text-muted">
-              Vigia Judicial es una herramienta de monitoreo que te ayuda a
-              organizar y recibir alertas sobre novedades en SISFE (Santa Fe).
-              No reemplaza la consulta oficial en el sistema judicial.
+              Vigia Judicial es una herramienta para abogados que facilita la
+              redaccion de escritos, la organizacion de expedientes y la
+              generacion de actuaciones judiciales. No reemplaza el criterio
+              profesional ni los sistemas oficiales del Poder Judicial.
             </p>
           </section>
 
           <section>
             <h2 className="font-semibold text-primary mb-1">
-              Sin garantia de plazos
+              Revision profesional
             </h2>
             <p className="text-muted">
-              No garantizamos la deteccion de todas las novedades ni el
-              cumplimiento de plazos procesales. Siempre verifica en SISFE antes
-              de tomar decisiones en tus causas.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="font-semibold text-primary mb-1">
-              Conexion con SISFE
-            </h2>
-            <p className="text-muted">
-              Para consultar novedades, vas a conectar tu sesion de SISFE
-              resolviendo el captcha vos mismo. Guardamos tu sesion de forma
-              cifrada solo para consultar expedientes que registres aca.
+              Los documentos generados usan plantillas juridicas controladas.
+              Siempre revisa y adapta el texto antes de presentarlo en sede
+              judicial.
             </p>
           </section>
 
@@ -91,8 +81,8 @@ export default function OnboardingForm() {
               Responsabilidad del usuario
             </h2>
             <p className="text-muted">
-              Sos responsable de mantener tu sesion de SISFE activa y de la
-              confidencialidad de tus credenciales. No compartas tu acceso con
+              Sos responsable de la confidencialidad de tu cuenta y del uso que
+              hagas de los documentos generados. No compartas tu acceso con
               terceros no autorizados.
             </p>
           </section>
@@ -113,7 +103,8 @@ export default function OnboardingForm() {
           />
           <span className="text-sm">
             Lei y acepto los terminos. Entiendo que Vigia Judicial es una
-            herramienta de apoyo y no garantiza plazos ni reemplaza SISFE.
+            herramienta de apoyo y no sustituye la revision letrada ni los
+            sistemas judiciales oficiales.
           </span>
         </label>
 

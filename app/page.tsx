@@ -10,7 +10,7 @@ export default function HomePage() {
           </p>
           <h1 className="text-4xl font-bold text-primary">Vigía Judicial</h1>
           <p className="text-muted text-lg">
-            Monitoreá las novedades de tus expedientes en un solo lugar.
+            Redactá escritos, organizá expedientes y generá actuaciones judiciales.
           </p>
         </div>
         <div className="flex gap-4 justify-center">

@@ -38,6 +38,7 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/onboarding") ||
     request.nextUrl.pathname.startsWith("/api/expedientes") ||
     request.nextUrl.pathname.startsWith("/api/escritos") ||
+    request.nextUrl.pathname.startsWith("/api/actuaciones") ||
     request.nextUrl.pathname.startsWith("/api/profile");
 
   if (!user && isProtectedRoute) {
