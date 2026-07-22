@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 const NAV = [
+  { href: "/dashboard", label: "Home", exact: true },
   { href: "/dashboard/escritos", label: "Escritos" },
   { href: "/dashboard/expedientes", label: "Expedientes" },
   { href: "/dashboard/configuracion", label: "Configuracion" },
@@ -25,7 +26,16 @@ export default function DashboardShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const initials = userEmail.slice(0, 2).toUpperCase();
+  const isAccountActive = pathname.startsWith("/dashboard/cuenta");
+
+  function isNavActive(item: { href: string; exact?: boolean }) {
+    if (item.exact) return pathname === item.href;
+    return pathname.startsWith(item.href);
+  }
 
   async function logout() {
     const supabase = createClient();
@@ -34,144 +44,149 @@ export default function DashboardShell({
     router.refresh();
   }
 
-  const initials = userEmail.slice(0, 2).toUpperCase();
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    if (menuOpen) {
+      document.addEventListener("mousedown", onClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [menuOpen]);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   return (
-    <div className="min-h-screen bg-background flex">
-      <aside className="w-56 border-r border-border bg-card hidden md:flex flex-col">
-        <div className="p-4 border-b border-border">
-          <Link href="/dashboard/escritos" className="font-bold text-primary text-lg">
-            Vigia Judicial
-          </Link>
-        </div>
-        <nav className="p-3 space-y-1 flex-1">
-          {NAV.map((item) => {
-            const active = pathname.startsWith(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`block px-3 py-2 rounded-lg text-sm ${
-                  active
-                    ? "bg-primary text-white"
-                    : "text-muted hover:bg-background"
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-        <UserFooter
-          userEmail={userEmail}
-          initials={initials}
-          onLogout={() => void logout()}
-          activePath={pathname}
-        />
-      </aside>
-
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="md:hidden border-b border-border p-4 flex items-center justify-between gap-2">
-          <Link href="/dashboard/escritos" className="font-semibold text-primary">
-            Vigia Judicial
-          </Link>
-          <button
-            type="button"
-            onClick={() => setMobileOpen((o) => !o)}
-            className="flex items-center gap-2 px-2 py-1 rounded-lg border border-border text-sm"
-            aria-expanded={mobileOpen}
-            aria-label="Menu de usuario"
+    <div className="min-h-screen bg-background flex flex-col">
+      <header className="sticky top-0 z-30 border-b border-border bg-card shadow-sm">
+        <div className="px-4 md:px-6 h-14 md:h-16 flex items-center justify-between gap-4">
+          <Link
+            href="/dashboard"
+            className="font-bold text-primary text-lg shrink-0"
           >
-            <span className="w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
-              {initials}
-            </span>
-          </button>
-        </header>
+            Vigia Judicial
+          </Link>
 
-        {mobileOpen && (
-          <div className="md:hidden border-b border-border bg-card p-3 space-y-1">
-            {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className={`block px-3 py-2 rounded-lg text-sm ${
-                  pathname.startsWith(item.href)
-                    ? "bg-primary text-white"
-                    : "text-muted"
-                }`}
-              >
-                {item.label}
-              </Link>
-            ))}
-            <div className="border-t border-border my-2 pt-2">
-              <p className="px-3 text-xs text-muted truncate mb-1">{userEmail}</p>
-              {USER_LINKS.map((item) => (
+          {/* Nav horizontal — desktop */}
+          <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
+            {NAV.map((item) => {
+              const active = isNavActive(item);
+              return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="block px-3 py-2 rounded-lg text-sm text-muted hover:bg-background"
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                    active
+                      ? "bg-primary text-white"
+                      : "text-muted hover:text-primary hover:bg-background"
+                  }`}
                 >
                   {item.label}
                 </Link>
-              ))}
-              <button
-                type="button"
-                onClick={() => void logout()}
-                className="w-full text-left px-3 py-2 text-sm text-danger rounded-lg hover:bg-red-50"
-              >
-                Cerrar sesion
-              </button>
-            </div>
-          </div>
-        )}
+              );
+            })}
+          </nav>
 
-        <main className="flex-1 p-4 md:p-8">{children}</main>
-      </div>
+          {/* Menu usuario */}
+          <div className="relative shrink-0" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((o) => !o)}
+              className={`flex items-center gap-2 pl-2 pr-3 py-2 rounded-xl border-2 text-sm font-medium transition-all min-h-[44px] ${
+                menuOpen
+                  ? "border-primary bg-primary text-white shadow-lg"
+                  : "border-primary bg-primary/10 text-primary shadow-md ring-2 ring-primary/20"
+              }`}
+              aria-expanded={menuOpen}
+              aria-label={menuOpen ? "Cerrar menu" : "Abrir menu"}
+            >
+              <span
+                className={`w-8 h-8 rounded-full text-xs font-bold flex items-center justify-center ${
+                  menuOpen ? "bg-white/20 text-white" : "bg-primary text-white"
+                }`}
+              >
+                {initials}
+              </span>
+              <span className="hidden sm:flex flex-col items-start leading-tight">
+                <span className="text-xs opacity-80">Menu</span>
+                <span className="text-sm">{menuOpen ? "Cerrar" : "Abrir"}</span>
+              </span>
+              <ChevronIcon open={menuOpen} />
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-border bg-card shadow-lg py-2 z-40">
+                <p className="px-4 py-2 text-xs text-muted truncate border-b border-border mb-1">
+                  {userEmail}
+                </p>
+
+                {/* Nav movil dentro del dropdown */}
+                <div className="md:hidden px-2 pb-2 mb-2 border-b border-border space-y-1">
+                  {NAV.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`block px-3 py-2 rounded-lg text-sm ${
+                        isNavActive(item)
+                          ? "bg-primary text-white"
+                          : "text-muted hover:bg-background"
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+
+                {USER_LINKS.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`block px-4 py-2 text-sm hover:bg-background ${
+                      isAccountActive ? "text-primary font-medium" : "text-muted"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => void logout()}
+                  className="w-full text-left px-4 py-2 text-sm text-danger hover:bg-red-50"
+                >
+                  Cerrar sesion
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <main className="flex-1 p-4 md:p-8">{children}</main>
     </div>
   );
 }
 
-function UserFooter({
-  userEmail,
-  initials,
-  onLogout,
-  activePath,
-}: {
-  userEmail: string;
-  initials: string;
-  onLogout: () => void;
-  activePath: string;
-}) {
-  const isAccountActive = activePath.startsWith("/dashboard/cuenta");
-
+function ChevronIcon({ open }: { open: boolean }) {
   return (
-    <div className="p-3 border-t border-border space-y-1">
-      <div className="flex items-center gap-2 px-2 py-2 mb-1">
-        <span className="w-8 h-8 shrink-0 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
-          {initials}
-        </span>
-        <span className="text-xs text-muted truncate">{userEmail}</span>
-      </div>
-      {USER_LINKS.map((item) => (
-        <Link
-          key={item.href}
-          href={item.href}
-          className={`block px-3 py-2 rounded-lg text-sm ${
-            isAccountActive ? "text-primary font-medium" : "text-muted hover:bg-background"
-          }`}
-        >
-          {item.label}
-        </Link>
-      ))}
-      <button
-        type="button"
-        onClick={onLogout}
-        className="w-full text-left px-3 py-2 text-sm text-muted hover:text-danger rounded-lg"
-      >
-        Cerrar sesion
-      </button>
-    </div>
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+    >
+      <path
+        d="M6 9l6 6 6-6"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
