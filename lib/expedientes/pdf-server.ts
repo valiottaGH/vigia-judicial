@@ -1,23 +1,9 @@
 /**
- * pdf-parse en Node/Vercel: hay que cargar el worker antes que PDFParse
- * y pasar CanvasFactory (@napi-rs/canvas) para evitar "DOMMatrix is not defined".
+ * pdf-parse v1 — estable en Node/Vercel sin DOMMatrix ni canvas nativo.
  */
-import "pdf-parse/worker";
-import { CanvasFactory } from "pdf-parse/worker";
-import { PDFParse } from "pdf-parse";
-
-const canvasFactory = new CanvasFactory();
+import pdf from "pdf-parse";
 
 export async function parsePdfText(buffer: Uint8Array): Promise<string> {
-  const parser = new PDFParse({
-    data: buffer,
-    CanvasFactory: canvasFactory,
-  });
-
-  try {
-    const result = await parser.getText();
-    return result.text ?? "";
-  } finally {
-    await parser.destroy();
-  }
+  const result = await pdf(Buffer.from(buffer));
+  return result.text ?? "";
 }
