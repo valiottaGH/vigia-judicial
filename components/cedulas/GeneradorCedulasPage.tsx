@@ -12,20 +12,24 @@ import {
 } from "@/lib/adjuntos/constants";
 import type { GenerarCedulaResponse } from "@/lib/cedulas/types";
 import { MEMBRETE_REQUIRED_MESSAGE } from "@/lib/profile/membrete";
+import type { AiQuota } from "@/lib/subscription/entitlements";
 
 interface GeneradorCedulasPageProps {
   aiDisponible: boolean;
   membreteCompleto: boolean;
+  planNombre: string;
+  aiQuota: AiQuota;
 }
 
 export default function GeneradorCedulasPage({
   aiDisponible,
   membreteCompleto,
+  planNombre,
+  aiQuota,
 }: GeneradorCedulasPageProps) {
   const [numero, setNumero] = useState("");
   const [caratula, setCaratula] = useState("");
   const [archivos, setArchivos] = useState<File[]>([]);
-  const [especificaciones, setEspecificaciones] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -102,10 +106,6 @@ export default function GeneradorCedulasPage({
     formData.append("numero", numero.trim());
     formData.append("caratula", caratula.trim());
     formData.append("file", archivos[0]);
-    const instrucciones = especificaciones.trim();
-    if (instrucciones) {
-      formData.append("especificaciones", instrucciones);
-    }
 
     try {
       const res = await fetch("/api/cedulas/generar", {
@@ -123,6 +123,10 @@ export default function GeneradorCedulasPage({
         }
         if (data.code === "MEMBRETE_INCOMPLETE") {
           setError(data.error ?? MEMBRETE_REQUIRED_MESSAGE);
+          return;
+        }
+        if (data.code === "PLAN_LIMIT") {
+          setError(data.error ?? "Alcanzaste el límite de tu plan este mes.");
           return;
         }
         setError(data.error ?? "Error al generar la cédula");
@@ -177,6 +181,36 @@ export default function GeneradorCedulasPage({
         </div>
       )}
 
+      {aiQuota.limit !== null && (
+        <div
+          className={`p-4 rounded-xl border text-sm ${
+            aiQuota.canGenerate
+              ? "bg-background border-border text-muted"
+              : "bg-amber-50 border-amber-200 text-amber-900"
+          }`}
+        >
+          Plan {planNombre}: {aiQuota.usedThisMonth} / {aiQuota.limit}{" "}
+          generaciones con IA este mes.
+          {!aiQuota.canGenerate && (
+            <>
+              {" "}
+              <Link
+                href="/dashboard/cuenta?tab=suscripcion"
+                className="text-primary font-medium hover:underline"
+              >
+                Mejorar plan
+              </Link>
+            </>
+          )}
+        </div>
+      )}
+
+      {aiQuota.limit === null && (
+        <p className="text-center text-xs text-muted">
+          Admin — generaciones sin límite ({aiQuota.usedThisMonth} este mes)
+        </p>
+      )}
+
       <form
         onSubmit={(e) => void handleSubmit(e)}
         className="bg-card border border-border rounded-xl p-6 md:p-8 space-y-5 shadow-sm"
@@ -228,29 +262,6 @@ export default function GeneradorCedulasPage({
           />
         </div>
 
-        <div>
-          <label
-            htmlFor="especificaciones"
-            className="block text-sm font-medium mb-1"
-          >
-            Instrucciones para la IA{" "}
-            <span className="font-normal text-muted">(opcional)</span>
-          </label>
-          <textarea
-            id="especificaciones"
-            value={especificaciones}
-            onChange={(e) => setEspecificaciones(e.target.value)}
-            rows={3}
-            maxLength={2000}
-            placeholder="Ej: designar perito contador, notificar solo al demandado, incluir domicilio de X, tono más formal…"
-            className="w-full px-3 py-2 border border-border rounded-lg text-sm resize-y min-h-[4.5rem]"
-          />
-          <p className="text-xs text-muted mt-1">
-            Indicaciones adicionales sobre el documento a generar o cómo redactar
-            la respuesta.
-          </p>
-        </div>
-
         {error && (
           <div className="p-3 rounded-lg bg-red-50 text-danger text-sm">
             {error}
@@ -259,7 +270,9 @@ export default function GeneradorCedulasPage({
 
         <button
           type="submit"
-          disabled={loading || !aiDisponible || !membreteCompleto}
+          disabled={
+            loading || !aiDisponible || !membreteCompleto || !aiQuota.canGenerate
+          }
           className="w-full py-3 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-hover disabled:opacity-50"
         >
           {loading ? "Interpretando y generando…" : "Generar cédula con IA"}

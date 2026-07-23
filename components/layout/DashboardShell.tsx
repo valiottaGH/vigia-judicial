@@ -11,12 +11,18 @@ const USER_LINKS = [
   { href: "/dashboard/cuenta?tab=perfil", label: "Mi cuenta" },
 ];
 
+const ADMIN_LINK = { href: "/dashboard/admin", label: "Administración" };
+
 export default function DashboardShell({
   children,
   userEmail,
+  planLabel,
+  isAdmin = false,
 }: {
   children: React.ReactNode;
   userEmail: string;
+  planLabel?: string;
+  isAdmin?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -92,6 +98,11 @@ export default function DashboardShell({
                 <p className="px-4 py-2 text-xs text-muted truncate border-b border-border mb-1">
                   {userEmail}
                 </p>
+                {planLabel && (
+                  <p className="px-4 pb-2 text-xs font-medium text-primary border-b border-border mb-1">
+                    Plan {planLabel}
+                  </p>
+                )}
                 {USER_LINKS.map((item) => (
                   <Link
                     key={item.href}
@@ -101,6 +112,14 @@ export default function DashboardShell({
                     {item.label}
                   </Link>
                 ))}
+                {isAdmin && (
+                  <Link
+                    href={ADMIN_LINK.href}
+                    className="block px-4 py-2 text-sm text-primary font-medium hover:bg-background"
+                  >
+                    {ADMIN_LINK.label}
+                  </Link>
+                )}
                 <button
                   type="button"
                   onClick={() => void logout()}

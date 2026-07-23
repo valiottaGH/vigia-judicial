@@ -21,6 +21,12 @@ import { extractTextFromBuffer } from "@/lib/expedientes/extract-text";
 import type { ExpedienteActuaciones } from "@/lib/actuaciones/types";
 import type { MembreteProfile } from "@/types";
 import { isMembreteCompleto, MEMBRETE_REQUIRED_MESSAGE } from "@/lib/profile/membrete";
+import {
+  getUserAiQuota,
+  parseSubscriptionStatus,
+} from "@/lib/subscription/entitlements";
+import { getPlan } from "@/lib/subscription/plans";
+import { isAdminEmail } from "@/lib/auth/admin";
 
 export async function GET() {
   return NextResponse.json({ ai_disponible: isAiConfigured() });
@@ -49,7 +55,7 @@ export async function POST(request: Request) {
   const { data: profileData } = await supabase
     .from("profiles")
     .select(
-      "full_name, estudio_nombre, matricula, domicilio_profesional, telefono, ciudad"
+      "full_name, estudio_nombre, matricula, domicilio_profesional, telefono, ciudad, plan, subscription_status, is_admin"
     )
     .eq("id", user.id)
     .maybeSingle();
@@ -64,10 +70,45 @@ export async function POST(request: Request) {
     );
   }
 
+  const subscriptionStatus = parseSubscriptionStatus(
+    profileData?.subscription_status
+  );
+
+  const isAdmin =
+    Boolean(profileData?.is_admin) || isAdminEmail(user.email);
+
+  let aiQuota;
+  try {
+    aiQuota = await getUserAiQuota(
+      supabase,
+      user.id,
+      profileData?.plan,
+      subscriptionStatus,
+      { isAdmin }
+    );
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Error al verificar plan" },
+      { status: 500 }
+    );
+  }
+
+  if (!aiQuota.canGenerate) {
+    const planNombre = getPlan(aiQuota.effectivePlan).nombre;
+    return NextResponse.json(
+      {
+        error: `Alcanzaste el límite de ${aiQuota.limit} generaciones con IA este mes (plan ${planNombre}). Mejorá tu plan para seguir generando.`,
+        code: "PLAN_LIMIT",
+        quota: aiQuota,
+        upgrade_url: "/dashboard/cuenta?tab=suscripcion",
+      },
+      { status: 403 }
+    );
+  }
+
   const formData = await request.formData();
   const numero = String(formData.get("numero") ?? "").trim();
   const caratula = String(formData.get("caratula") ?? "").trim();
-  const especificaciones = String(formData.get("especificaciones") ?? "").trim();
   const file = formData.get("file");
 
   if (!numero || !caratula) {
@@ -80,13 +121,6 @@ export async function POST(request: Request) {
   if (!(file instanceof File)) {
     return NextResponse.json(
       { error: "Cargá el proveído o notificación en PDF o Word" },
-      { status: 400 }
-    );
-  }
-
-  if (especificaciones.length > 2000) {
-    return NextResponse.json(
-      { error: "Las instrucciones no pueden superar 2000 caracteres" },
       { status: 400 }
     );
   }
@@ -194,7 +228,6 @@ export async function POST(request: Request) {
       numeroExpediente: numero,
       caratula,
       documentoTexto,
-      especificaciones: especificaciones || undefined,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error de IA";

@@ -3,6 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import CuentaClient from "@/components/cuenta/CuentaClient";
 import type { AccountProfile } from "@/types";
 import type { PlanId, SubscriptionStatus } from "@/lib/subscription/plans";
+import {
+  getUserAiQuota,
+  parseSubscriptionStatus,
+} from "@/lib/subscription/entitlements";
 
 export default async function CuentaPage() {
   const supabase = await createClient();
@@ -19,6 +23,13 @@ export default async function CuentaPage() {
     .maybeSingle();
 
   const p = profile as AccountProfile | null;
+  const subscriptionStatus = parseSubscriptionStatus(p?.subscription_status);
+  const aiQuota = await getUserAiQuota(
+    supabase,
+    user!.id,
+    p?.plan,
+    subscriptionStatus
+  );
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -37,6 +48,7 @@ export default async function CuentaPage() {
             (p?.subscription_status as SubscriptionStatus) ?? "active"
           }
           subscriptionEndsAt={p?.subscription_ends_at ?? null}
+          aiQuota={aiQuota}
         />
       </Suspense>
     </div>

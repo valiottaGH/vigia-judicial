@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -23,11 +23,13 @@ export default function LoginForm() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") ?? "/dashboard";
   const urlError = searchParams.get("error");
+  const sessionExpired = searchParams.get("reason") === "session_expired";
+  const signupMode = searchParams.get("mode") === "signup";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(signupMode);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(
@@ -36,6 +38,10 @@ export default function LoginForm() {
   const [message, setMessage] = useState<string | null>(null);
 
   const supabase = createClient();
+
+  useEffect(() => {
+    if (signupMode) setIsSignUp(true);
+  }, [signupMode]);
 
   function resetFormErrors() {
     setError(null);
@@ -148,6 +154,11 @@ export default function LoginForm() {
         </div>
 
         <div className="bg-card border border-border rounded-xl p-8 shadow-sm space-y-5">
+          {sessionExpired && !error && (
+            <div className="p-3 rounded-lg bg-amber-50 text-amber-800 text-sm">
+              Tu sesion expiro por inactividad o tiempo maximo. Inicia sesion de nuevo.
+            </div>
+          )}
           {error && (
             <div className="p-3 rounded-lg bg-red-50 text-danger text-sm">{error}</div>
           )}

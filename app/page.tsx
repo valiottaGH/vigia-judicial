@@ -1,8 +1,9 @@
 import Link from "next/link";
+import PricingSection from "@/components/marketing/PricingSection";
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-4">
+    <main className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
       <div className="max-w-lg text-center space-y-6">
         <div className="space-y-2">
           <h1 className="text-4xl font-bold text-primary">Fast Cedu</h1>
@@ -11,15 +12,23 @@ export default function HomePage() {
             documento con la respuesta automáticamente.
           </p>
         </div>
-        <div className="flex gap-4 justify-center">
+        <div className="flex flex-wrap gap-3 justify-center">
           <Link
             href="/login"
             className="px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary-hover transition-colors"
           >
             Iniciar sesión
           </Link>
+          <Link
+            href="/login?mode=signup"
+            className="px-6 py-3 border border-primary text-primary rounded-lg font-medium hover:bg-primary/5 transition-colors"
+          >
+            Registrarse
+          </Link>
         </div>
       </div>
+
+      <PricingSection />
     </main>
   );
 }

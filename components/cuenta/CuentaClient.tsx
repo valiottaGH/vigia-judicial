@@ -6,6 +6,7 @@ import PasswordForm from "./PasswordForm";
 import SubscriptionPanel from "./SubscriptionPanel";
 import type { AccountProfile } from "@/types";
 import type { PlanId, SubscriptionStatus } from "@/lib/subscription/plans";
+import type { AiQuota } from "@/lib/subscription/entitlements";
 
 const TABS = [
   { id: "perfil", label: "Perfil" },
@@ -21,12 +22,14 @@ export default function CuentaClient({
   plan,
   subscriptionStatus,
   subscriptionEndsAt,
+  aiQuota,
 }: {
   email: string;
   profile: AccountProfile | null;
   plan: PlanId;
   subscriptionStatus: SubscriptionStatus;
   subscriptionEndsAt: string | null;
+  aiQuota: AiQuota;
 }) {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab") as TabId | null;
@@ -70,6 +73,7 @@ export default function CuentaClient({
             plan={plan}
             status={subscriptionStatus}
             endsAt={subscriptionEndsAt}
+            aiQuota={aiQuota}
           />
         </section>
       )}

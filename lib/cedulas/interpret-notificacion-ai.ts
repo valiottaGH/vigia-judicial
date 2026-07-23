@@ -20,7 +20,6 @@ function buildSystemPrompt(): string {
     "texto_proveido: extracto fiel de lo ordenado por el tribunal.",
     "texto_respuesta: redacción formal lista para insertar en la cédula/carta (cumplimiento, solicitud, intimación, etc.).",
     "partes: personas u organismos a notificar con rol actor|demandado|tercero|organismo.",
-    "Si el abogado envía instrucciones adicionales, incorporalas en texto_respuesta, partes y variables_carta sin contradecir el proveído.",
   ].join("\n");
 }
 
@@ -28,24 +27,14 @@ function buildUserPrompt(input: {
   numeroExpediente: string;
   caratula: string;
   documentoTexto: string;
-  especificaciones?: string;
 }): string {
-  const instrucciones = input.especificaciones?.trim()
-    ? `
-
-Instrucciones del abogado (incorporar en la redacción y destinatarios cuando corresponda):
----
-${input.especificaciones.trim()}
----`
-    : "";
-
   return `Expediente Nº ${input.numeroExpediente}
 Carátula: ${input.caratula}
 
 Texto del proveído / notificación judicial:
 ---
 ${input.documentoTexto}
----${instrucciones}
+---
 
 Devolvé JSON:
 {
@@ -135,7 +124,6 @@ export async function interpretarNotificacion(input: {
   numeroExpediente: string;
   caratula: string;
   documentoTexto: string;
-  especificaciones?: string;
 }): Promise<InterpretacionNotificacion> {
   if (!input.documentoTexto.trim()) {
     throw new Error("No se pudo leer texto del documento cargado.");

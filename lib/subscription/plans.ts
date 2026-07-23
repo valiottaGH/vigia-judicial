@@ -1,5 +1,5 @@
 /** Definicion de planes — la logica de cobro (Stripe) se agregara despues. */
-export type PlanId = "free" | "pro";
+export type PlanId = "free" | "pro" | "business";
 
 export type SubscriptionStatus =
   | "active"
@@ -8,43 +8,76 @@ export type SubscriptionStatus =
   | "past_due"
   | "none";
 
+export const PLAN_GENERATION_LIMITS: Record<PlanId, number> = {
+  free: 5,
+  pro: 500,
+  business: 1500,
+};
+
 export interface PlanDefinition {
   id: PlanId;
   nombre: string;
   precio: string;
+  precioArs: number;
   descripcion: string;
   features: string[];
+  destacado?: boolean;
 }
 
 export const PLANES: PlanDefinition[] = [
   {
     id: "free",
-    nombre: "Gratuito",
+    nombre: "Gratis",
     precio: "$0 / mes",
-    descripcion: "Para probar y redactar escritos basicos.",
+    precioArs: 0,
+    descripcion: "Para probar el generador con IA.",
     features: [
-      "Hasta 10 escritos",
-      "Plantillas y editor",
-      "Exportar PDF",
-      "IA: 5 generaciones / mes",
+      "5 generaciones con IA por mes",
+      "Cédulas y cartas documento",
+      "Descarga en Word",
+      "Membrete personalizado",
     ],
   },
   {
     id: "pro",
-    nombre: "Profesional",
-    precio: "Consultar",
-    descripcion: "Para estudios que redactan a diario.",
+    nombre: "Pro",
+    precio: "$5.000 / mes",
+    precioArs: 5000,
+    descripcion: "Para abogados que generan cédulas a diario.",
     features: [
-      "Escritos ilimitados",
-      "Generacion IA ilimitada",
-      "Membrete personalizado en PDF",
+      "500 generaciones con IA por mes",
+      "Todo lo del plan Gratis",
       "Soporte prioritario",
+      "Prioridad en nuevas funciones",
+    ],
+    destacado: true,
+  },
+  {
+    id: "business",
+    nombre: "Business",
+    precio: "$10.000 / mes",
+    precioArs: 10000,
+    descripcion: "Para estudios jurídicos y equipos.",
+    features: [
+      "1.500 generaciones con IA por mes",
+      "Todo lo del plan Pro",
+      "Usuarios del estudio (próximamente)",
+      "Soporte dedicado y onboarding",
     ],
   },
 ];
 
+export function parsePlanId(value: string | null | undefined): PlanId {
+  if (value === "pro" || value === "business") return value;
+  return "free";
+}
+
 export function getPlan(id: string): PlanDefinition {
   return PLANES.find((p) => p.id === id) ?? PLANES[0];
+}
+
+export function getGenerationLimit(planId: PlanId): number {
+  return PLAN_GENERATION_LIMITS[planId];
 }
 
 export function statusLabel(status: SubscriptionStatus): string {
@@ -56,4 +89,8 @@ export function statusLabel(status: SubscriptionStatus): string {
     none: "Sin suscripcion",
   };
   return labels[status] ?? status;
+}
+
+export function isPaidPlan(plan: PlanId): boolean {
+  return plan === "pro" || plan === "business";
 }
