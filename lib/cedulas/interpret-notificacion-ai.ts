@@ -2,6 +2,15 @@ import type { InterpretacionNotificacion, ParteInterpretada } from "./types";
 import type { RolParte, TipoActuacion } from "@/lib/actuaciones/types";
 import { createChatCompletion } from "@/lib/ai/chat";
 
+export class DocumentoNoAptoError extends Error {
+  readonly code = "DOCUMENTO_NO_APTO" as const;
+
+  constructor(message: string) {
+    super(message);
+    this.name = "DocumentoNoAptoError";
+  }
+}
+
 const TIPOS_DOC_VALIDOS = [
   "cedula",
   "oficio",
@@ -13,13 +22,21 @@ const TIPOS_DOC_VALIDOS = [
 function buildSystemPrompt(): string {
   return [
     "Sos un asistente jurídico para abogados en Argentina.",
-    "Analizás notificaciones/proveídos judiciales y determinás qué documento debe generar el letrado para cumplir o dar respuesta.",
+    "Tu ÚNICO propósito es analizar proveídos, notificaciones y resoluciones del Poder Judicial, y redactar la respuesta procesal que el letrado debe presentar o notificar.",
+    "Ejemplos de trámites válidos: notificar partes, designar o aceptar peritos, contestar traslados, cumplir vistas, presentar liquidaciones, responder oficios judiciales, mandamientos, cédulas, notificaciones electrónicas.",
+    "",
+    "PASO 1 — Evaluá si el texto cargado es un trámite judicial real.",
+    "Si el documento NO es una notificación/proveído/resolución/oficio judicial, o no permite identificar qué debe hacer el abogado en el proceso, respondé con apto=false.",
+    "Rechazá (apto=false) documentos como: recetas, facturas, contratos comerciales ajenos al expediente, noticias, manuales, emails personales, currículums, contenido vacío o ilegible, material académico, protocolos internos sin orden judicial, o cualquier texto sin vínculo con un trámite judicial.",
+    "",
+    "PASO 2 — Solo si apto=true, completá el resto del JSON para generar la cédula u otro escrito procesal.",
     "Respondé SOLO JSON válido.",
     "Tipos de trámite frecuentes: peritos, notificar_partes, liquidacion, traslado, vista_causa, otras.",
-    "tipo_documento puede ser: cedula (notificar resolución a partes), oficio, mandamiento, notificacion_electronica, carta_documento (intimación extrajudicial fehaciente).",
+    "tipo_documento puede ser: cedula (notificar resolución a partes), oficio, mandamiento, notificacion_electronica, carta_documento (intimación extrajudicial fehaciente vinculada al caso).",
     "texto_proveido: extracto fiel de lo ordenado por el tribunal.",
     "texto_respuesta: redacción formal lista para insertar en la cédula/carta (cumplimiento, solicitud, intimación, etc.).",
     "partes: personas u organismos a notificar con rol actor|demandado|tercero|organismo.",
+    "motivo_rechazo: explicación clara y breve en español para el abogado cuando apto=false.",
   ].join("\n");
 }
 
@@ -38,6 +55,8 @@ ${input.documentoTexto}
 
 Devolvé JSON:
 {
+  "apto": true,
+  "motivo_rechazo": null,
   "tipo_tramite": "peritos | notificar_partes | liquidacion | ...",
   "tipo_documento": "cedula | oficio | mandamiento | notificacion_electronica | carta_documento",
   "resumen": "una oración",
@@ -50,6 +69,12 @@ Devolvé JSON:
     { "nombre": "Juan", "apellido": "Pérez", "rol": "demandado", "domicilio": "...", "notificar": true }
   ],
   "variables_carta": { "destinatario": "...", "domicilio_destinatario": "...", "monto": "...", "concepto": "...", "plazo": "..." }
+}
+
+Si el documento NO es apto, devolvé SOLO:
+{
+  "apto": false,
+  "motivo_rechazo": "Explicación clara de por qué no se puede generar una cédula con este archivo"
 }`;
 }
 
@@ -74,6 +99,23 @@ function parseParte(raw: Record<string, unknown>): ParteInterpretada | null {
     domicilio: raw.domicilio ? String(raw.domicilio) : null,
     notificar: raw.notificar !== false,
   };
+}
+
+function isApto(raw: Record<string, unknown>): boolean {
+  const value = raw.apto;
+  if (value === false || value === "false") return false;
+  if (value === true || value === "true") return true;
+  return true;
+}
+
+function assertDocumentoApto(raw: Record<string, unknown>): void {
+  if (isApto(raw)) return;
+
+  const motivo = String(raw.motivo_rechazo ?? raw.resumen ?? "").trim();
+  throw new DocumentoNoAptoError(
+    motivo ||
+      "El archivo no corresponde a un trámite judicial. Cargá un proveído, notificación o resolución del juzgado que indique qué debe hacer el letrado (notificar partes, responder un traslado, designar perito, etc.)."
+  );
 }
 
 function normalizeInterpretacion(
@@ -144,6 +186,8 @@ export async function interpretarNotificacion(input: {
   } catch {
     throw new Error("La IA devolvió un formato inválido");
   }
+
+  assertDocumentoApto(parsed);
 
   return normalizeInterpretacion(parsed);
 }

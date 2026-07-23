@@ -13,6 +13,7 @@ import {
   persistirInterpretacion,
 } from "@/lib/cedulas/generate-from-interpretacion";
 import {
+  DocumentoNoAptoError,
   interpretarNotificacion,
 } from "@/lib/cedulas/interpret-notificacion-ai";
 import { isAiConfigured, aiConfigErrorMessage } from "@/lib/ai/config";
@@ -166,6 +167,36 @@ async function handleGenerarCedula(request: NextRequest) {
 
   const bytes = new Uint8Array(await file.arrayBuffer());
 
+  let documentoTexto: string;
+  try {
+    documentoTexto = await extractTextFromBuffer(bytes, fileMime);
+  } catch (err) {
+    return json(
+      {
+        error:
+          err instanceof Error
+            ? err.message
+            : "No se pudo leer el documento. Usá PDF, DOC o DOCX.",
+      },
+      { status: 400 }
+    );
+  }
+
+  let interpretacion;
+  try {
+    interpretacion = await interpretarNotificacion({
+      numeroExpediente: numero,
+      caratula,
+      documentoTexto,
+    });
+  } catch (err) {
+    if (err instanceof DocumentoNoAptoError) {
+      return json({ error: err.message, code: err.code }, { status: 422 });
+    }
+    const msg = err instanceof Error ? err.message : "Error de IA";
+    return json({ error: msg }, { status: 500 });
+  }
+
   const { data: existente } = await supabase
     .from("expedientes")
     .select("id, numero, caratula, jurisdiccion, juzgado, fuero")
@@ -231,33 +262,6 @@ async function handleGenerarCedula(request: NextRequest) {
     mime_type: fileMime,
     tamano_bytes: file.size,
   } as never);
-
-  let documentoTexto: string;
-  try {
-    documentoTexto = await extractTextFromBuffer(bytes, fileMime);
-  } catch (err) {
-    return json(
-      {
-        error:
-          err instanceof Error
-            ? err.message
-            : "No se pudo leer el documento. Usá PDF, DOC o DOCX.",
-      },
-      { status: 400 }
-    );
-  }
-
-  let interpretacion;
-  try {
-    interpretacion = await interpretarNotificacion({
-      numeroExpediente: numero,
-      caratula,
-      documentoTexto,
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Error de IA";
-    return json({ error: msg }, { status: 500 });
-  }
 
   if (interpretacion.juzgado) {
     await supabase

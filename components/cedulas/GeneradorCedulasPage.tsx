@@ -144,6 +144,10 @@ export default function GeneradorCedulasPage({
           setError(data.error ?? "Alcanzaste el límite de tu plan este mes.");
           return;
         }
+        if (data.code === "DOCUMENTO_NO_APTO") {
+          setError(data.error ?? "El documento no corresponde a un trámite judicial.");
+          return;
+        }
         setError(data.error ?? "Error al generar la cédula");
         return;
       }
@@ -171,9 +175,9 @@ export default function GeneradorCedulasPage({
           Generar cédula con IA
         </h1>
         <p className="text-sm text-muted mt-2 leading-relaxed">
-          Cargá el proveído o notificación del juzgado. La IA interpreta qué
-          pidieron (peritos, notificar partes, liquidación, etc.) y genera la
-          cédula o carta documento con la respuesta.
+          Cargá el proveído o notificación del juzgado. La IA solo procesa trámites
+          judiciales (notificar partes, peritos, traslados, liquidación, etc.) y
+          genera la cédula o carta documento con la respuesta.
         </p>
       </div>
 
