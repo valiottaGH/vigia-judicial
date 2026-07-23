@@ -74,6 +74,13 @@ export default function CuentaClient({
             status={subscriptionStatus}
             endsAt={subscriptionEndsAt}
             aiQuota={aiQuota}
+            paymentNotice={
+              (searchParams.get("payment") as
+                | "success"
+                | "failure"
+                | "pending"
+                | null) ?? null
+            }
           />
         </section>
       )}

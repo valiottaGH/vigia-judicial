@@ -52,18 +52,24 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Plan invalido" }, { status: 400 });
     }
 
-    const updates =
-      target === "free"
-        ? {
-            plan: "free",
-            subscription_status: "canceled",
-            subscription_ends_at: null,
-          }
-        : {
-            plan: target,
-            subscription_status: "active",
-            subscription_ends_at: null,
-          };
+    if (target === "free") {
+      // downgrade manual permitido
+    } else {
+      return NextResponse.json(
+        {
+          error:
+            "Para activar un plan pago usa el checkout de Mercado Pago en Mi cuenta → Suscripcion.",
+          code: "PAYMENT_REQUIRED",
+        },
+        { status: 402 }
+      );
+    }
+
+    const updates = {
+      plan: "free" as const,
+      subscription_status: "canceled" as const,
+      subscription_ends_at: null,
+    };
 
     const { data, error } = await supabase
       .from("profiles")
@@ -80,7 +86,7 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({
       account: data,
-      message: `Plan actualizado a ${target === "pro" ? "Pro" : target === "business" ? "Business" : "Gratis"}.`,
+      message: "Plan actualizado a Gratis.",
     });
   }
 

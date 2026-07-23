@@ -1,4 +1,4 @@
-/** Definicion de planes — la logica de cobro (Stripe) se agregara despues. */
+/** Definicion de planes — cobro via Mercado Pago Checkout Bricks. */
 export type PlanId = "free" | "pro" | "business";
 
 export type SubscriptionStatus =

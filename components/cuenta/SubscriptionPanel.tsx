@@ -18,14 +18,15 @@ export default function SubscriptionPanel({
   status,
   endsAt,
   aiQuota,
+  paymentNotice,
 }: {
   plan: PlanId;
   status: SubscriptionStatus;
   endsAt: string | null;
   aiQuota: AiQuota;
+  paymentNotice?: "success" | "failure" | "pending" | null;
 }) {
   const router = useRouter();
-  const [showChangePlan, setShowChangePlan] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +56,6 @@ export default function SubscriptionPanel({
       }
 
       setShowCancelConfirm(false);
-      setShowChangePlan(false);
       setMessage(data.message ?? "Suscripcion cancelada.");
       router.refresh();
     } catch {
@@ -65,8 +65,19 @@ export default function SubscriptionPanel({
     }
   }
 
-  async function changePlan(targetPlan: PlanId) {
+  async function selectPlan(targetPlan: PlanId) {
     if (targetPlan === plan && paidActive) return;
+
+    if (targetPlan === "free") {
+      await changePlan("free");
+      return;
+    }
+
+    router.push(`/dashboard/cuenta/checkout?plan=${targetPlan}`);
+  }
+
+  async function changePlan(targetPlan: PlanId) {
+    if (targetPlan !== "free") return;
 
     setLoading(true);
     setError(null);
@@ -85,7 +96,6 @@ export default function SubscriptionPanel({
         return;
       }
 
-      setShowChangePlan(false);
       setMessage(data.message ?? "Plan actualizado.");
       router.refresh();
     } catch {
@@ -95,8 +105,22 @@ export default function SubscriptionPanel({
     }
   }
 
+  const paymentNoticeText =
+    paymentNotice === "success"
+      ? "Pago recibido. Tu plan se activara en unos instantes si aun no lo ves reflejado."
+      : paymentNotice === "pending"
+        ? "Pago pendiente de acreditacion. Te avisaremos cuando se confirme."
+        : paymentNotice === "failure"
+          ? "El pago no se completo. Podes intentar de nuevo."
+          : null;
+
   return (
     <div className="space-y-6">
+      {paymentNoticeText && (
+        <div className="p-3 rounded-lg bg-accent/25 border border-accent text-sm text-gray-900">
+          {paymentNoticeText}
+        </div>
+      )}
       {error && (
         <div className="p-3 rounded-lg bg-red-50 text-danger text-sm">{error}</div>
       )}
@@ -151,32 +175,16 @@ export default function SubscriptionPanel({
           ))}
         </ul>
 
-        {(paidActive || plan === "free" || status === "canceled") && (
+        {(paidActive || plan === "free" || status === "canceled") && canCancel && (
           <div className="mt-5 flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={() => {
-                setShowChangePlan((v) => !v);
-                setShowCancelConfirm(false);
-              }}
+              onClick={() => setShowCancelConfirm(true)}
               disabled={loading}
-              className="px-4 py-2 border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary/5 disabled:opacity-50"
+              className="px-4 py-2 bg-danger text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
             >
-              {showChangePlan ? "Ocultar planes" : "Cambiar de plan"}
+              Cancelar suscripcion
             </button>
-            {canCancel && (
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCancelConfirm(true);
-                  setShowChangePlan(false);
-                }}
-                disabled={loading}
-                className="px-4 py-2 bg-danger text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
-              >
-                Cancelar suscripcion
-              </button>
-            )}
           </div>
         )}
       </div>
@@ -218,28 +226,16 @@ export default function SubscriptionPanel({
         </div>
       )}
 
-      {showChangePlan && (
-        <PlanGrid
-          currentPlan={plan}
-          paidActive={paidActive}
-          loading={loading}
-          onSelectPlan={(p) => void changePlan(p)}
-        />
-      )}
-
-      {!paidActive && !showChangePlan && (
-        <PlanGrid
-          currentPlan={plan}
-          paidActive={false}
-          loading={loading}
-          onSelectPlan={(p) => void changePlan(p)}
-        />
-      )}
+      <PlanGrid
+        currentPlan={plan}
+        paidActive={paidActive}
+        loading={loading}
+        onSelectPlan={(p) => void selectPlan(p)}
+      />
 
       <p className="text-xs text-muted">
-        Los pagos online con tarjeta (Stripe) estaran disponibles proximamente.
-        Mientras tanto, activamos los planes Pro y Business manualmente o desde
-        aca para pruebas.
+        Los planes pagos se abonan con Mercado Pago (Checkout Bricks). Tras el pago
+        aprobado, el plan queda activo por 30 dias.
       </p>
     </div>
   );
@@ -308,7 +304,7 @@ function PlanGrid({
                     : "border border-primary text-primary hover:bg-primary/5"
                 }`}
               >
-                {loading ? "Actualizando…" : `Elegir ${p.nombre}`}
+                {loading ? "Redirigiendo…" : `Pagar ${p.nombre}`}
               </button>
             )}
           </div>
