@@ -1,6 +1,6 @@
 import mammoth from "mammoth";
 import WordExtractor from "word-extractor";
-import { PDFParse } from "pdf-parse";
+import { parsePdfText } from "@/lib/expedientes/pdf-server";
 
 const MAX_CHARS_PER_FILE = 8000;
 const MAX_TOTAL_CHARS = 24000;
@@ -25,18 +25,15 @@ export async function extractTextFromBuffer(
 }
 
 async function extractPdfText(buffer: Uint8Array): Promise<string> {
-  const parser = new PDFParse({ data: buffer });
   try {
-    const result = await parser.getText();
-    return truncate(result.text ?? "");
+    const text = await parsePdfText(buffer);
+    return truncate(text);
   } catch (err) {
     throw new Error(
       err instanceof Error
         ? `No se pudo leer el PDF: ${err.message}`
         : "No se pudo leer el PDF"
     );
-  } finally {
-    await parser.destroy();
   }
 }
 
