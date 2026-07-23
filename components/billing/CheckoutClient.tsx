@@ -103,6 +103,12 @@ export default function CheckoutClient({ planId, publicKey }: CheckoutClientProp
         <p className="text-sm text-muted mt-1">
           {plan.precio} — acceso por 30 dias. Pagá con tarjeta de credito o debito.
         </p>
+        <p className="text-xs text-muted mt-2">
+          Tarjetas de prueba MP: titular <strong className="text-gray-900">APRO</strong>,
+          Mastercard <strong className="text-gray-900">5031 7557 3454 0604</strong>, CVV{" "}
+          <strong className="text-gray-900">123</strong>, venc.{" "}
+          <strong className="text-gray-900">11/30</strong>.
+        </p>
       </div>
 
       {error && (

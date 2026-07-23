@@ -65,31 +65,49 @@ export default function MercadoPagoPaymentBrick({
         },
       }}
       onSubmit={async (formData) => {
-        const res = await fetch("/api/billing/process-payment", {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            plan: planId,
-            externalReference,
-            formData,
-          }),
-        });
+        try {
+          const res = await fetch("/api/billing/process-payment", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              plan: planId,
+              externalReference,
+              formData,
+            }),
+          });
 
-        const data = (await res.json()) as {
-          status?: string;
-          message?: string;
-          error?: string;
-        };
+          let data: {
+            status?: string;
+            message?: string;
+            error?: string;
+          } = {};
 
-        if (!res.ok) {
-          throw new Error(data.error ?? "No se pudo procesar el pago");
+          try {
+            data = (await res.json()) as typeof data;
+          } catch {
+            const msg =
+              "Error del servidor al procesar el pago. Revisa Vercel Logs y las migraciones de Supabase.";
+            onError(msg);
+            throw new Error(msg);
+          }
+
+          if (!res.ok) {
+            const msg = data.error ?? "No se pudo procesar el pago";
+            onError(msg);
+            throw new Error(msg);
+          }
+
+          onSuccess({
+            status: data.status ?? "approved",
+            message: data.message,
+          });
+        } catch (err) {
+          if (err instanceof Error && err.message.includes("Failed to fetch")) {
+            onError("Error de conexion. Verifica tu internet e intenta de nuevo.");
+          }
+          throw err;
         }
-
-        onSuccess({
-          status: data.status ?? "approved",
-          message: data.message,
-        });
       }}
       onError={(error) => {
         onError(formatBrickError(error));

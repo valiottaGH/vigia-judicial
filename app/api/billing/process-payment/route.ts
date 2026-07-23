@@ -9,7 +9,7 @@ import {
   mapMercadoPagoStatus,
 } from "@/lib/mercadopago/fulfill-payment";
 import { parseExternalReference } from "@/lib/mercadopago/references";
-import { getPlan, isPaidPlan, parsePlanId } from "@/lib/subscription/plans";
+import { getPlan, isPaidPlan, parsePlanId, type PlanId } from "@/lib/subscription/plans";
 
 interface ProcessPaymentBody {
   plan?: string;
@@ -84,17 +84,34 @@ export async function POST(request: Request) {
   }
 
   const mpStatus = payment.status ?? "pending";
-  const admin = createServiceClient();
-
-  const result = await fulfillMercadoPagoPayment({
-    admin,
-    externalReference: body.externalReference,
-    mercadopagoPaymentId: String(payment.id ?? ""),
-    mercadopagoStatus: mpStatus,
-    payerId: payment.payer?.id ? String(payment.payer.id) : null,
-  });
-
   const mapped = mapMercadoPagoStatus(mpStatus);
+
+  let result: { activated: boolean; planId: PlanId | null };
+  try {
+    const admin = createServiceClient();
+    result = await fulfillMercadoPagoPayment({
+      admin,
+      externalReference: body.externalReference,
+      mercadopagoPaymentId: String(payment.id ?? ""),
+      mercadopagoStatus: mpStatus,
+      payerId: payment.payer?.id ? String(payment.payer.id) : null,
+    });
+  } catch (err) {
+    console.error("[billing/process-payment] fulfill", err);
+    const detail =
+      err instanceof Error ? err.message : "No se pudo activar el plan";
+    if (mapped === "approved") {
+      return NextResponse.json(
+        {
+          error: `${detail}. El cobro pudo registrarse en Mercado Pago; contacta soporte si el plan no aparece.`,
+          code: "ACTIVATION_FAILED",
+          paymentId: payment.id,
+        },
+        { status: 500 }
+      );
+    }
+    return NextResponse.json({ error: detail }, { status: 500 });
+  }
 
   if (mapped === "approved") {
     return NextResponse.json({
