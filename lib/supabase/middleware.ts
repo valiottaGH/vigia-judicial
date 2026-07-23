@@ -79,6 +79,12 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/api/admin");
 
   if (!user && isProtectedRoute) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { error: "No autorizado", code: "UNAUTHORIZED" },
+        { status: 401 }
+      );
+    }
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirect", request.nextUrl.pathname);

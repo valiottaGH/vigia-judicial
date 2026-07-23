@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { NextRequest, NextResponse } from "next/server";
+import { createSupabaseRouteClient } from "@/lib/supabase/route-handler";
 import {
   uploadAdjuntoToStorage,
   validateAdjuntoFile,
@@ -35,7 +35,7 @@ export async function GET() {
   return NextResponse.json({ ai_disponible: isAiConfigured() });
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     return await handleGenerarCedula(request);
   } catch (err) {
@@ -52,18 +52,19 @@ export async function POST(request: Request) {
   }
 }
 
-async function handleGenerarCedula(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+async function handleGenerarCedula(request: NextRequest) {
+  const { supabase, withSessionCookies, getUser } =
+    createSupabaseRouteClient(request);
+  const json = (body: unknown, init?: ResponseInit) =>
+    withSessionCookies(NextResponse.json(body, init));
+  const user = await getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    return json({ error: "No autorizado", code: "UNAUTHORIZED" }, { status: 401 });
   }
 
   if (!isAiConfigured()) {
-    return NextResponse.json(
+    return json(
       {
         error: aiConfigErrorMessage(),
         code: "AI_NOT_CONFIGURED",
@@ -81,7 +82,7 @@ async function handleGenerarCedula(request: Request) {
     .maybeSingle();
 
   if (!isMembreteCompleto(profileData as MembreteProfile | null)) {
-    return NextResponse.json(
+    return json(
       {
         error: MEMBRETE_REQUIRED_MESSAGE,
         code: "MEMBRETE_INCOMPLETE",
@@ -107,7 +108,7 @@ async function handleGenerarCedula(request: Request) {
       { isAdmin }
     );
   } catch (err) {
-    return NextResponse.json(
+    return json(
       { error: err instanceof Error ? err.message : "Error al verificar plan" },
       { status: 500 }
     );
@@ -117,7 +118,7 @@ async function handleGenerarCedula(request: Request) {
     const planNombre = getPlan(aiQuota.effectivePlan).nombre;
     const periodo =
       aiQuota.usagePeriod === "lifetime" ? "en total" : "este mes";
-    return NextResponse.json(
+    return json(
       {
         error: `Alcanzaste el límite de ${aiQuota.limit} generaciones con IA ${periodo} (plan ${planNombre}). Mejorá tu plan para seguir generando.`,
         code: "PLAN_LIMIT",
@@ -134,14 +135,14 @@ async function handleGenerarCedula(request: Request) {
   const file = formData.get("file");
 
   if (!numero || !caratula) {
-    return NextResponse.json(
+    return json(
       { error: "Número y carátula son obligatorios" },
       { status: 400 }
     );
   }
 
   if (!(file instanceof File)) {
-    return NextResponse.json(
+    return json(
       { error: "Cargá el proveído o notificación en PDF o Word" },
       { status: 400 }
     );
@@ -151,7 +152,7 @@ async function handleGenerarCedula(request: Request) {
   try {
     fileMime = validateAdjuntoFile(file);
   } catch (err) {
-    return NextResponse.json(
+    return json(
       {
         error:
           err instanceof Error && err.message.includes("No se puede subir")
@@ -193,7 +194,7 @@ async function handleGenerarCedula(request: Request) {
       .single();
 
     if (createError || !creado) {
-      return NextResponse.json(
+      return json(
         { error: createError?.message ?? "Error al crear expediente" },
         { status: 500 }
       );
@@ -213,7 +214,7 @@ async function handleGenerarCedula(request: Request) {
       file,
     });
   } catch (err) {
-    return NextResponse.json(
+    return json(
       { error: err instanceof Error ? err.message : "Error al subir archivo" },
       { status: 500 }
     );
@@ -233,7 +234,7 @@ async function handleGenerarCedula(request: Request) {
   try {
     documentoTexto = await extractTextFromBuffer(bytes, fileMime);
   } catch (err) {
-    return NextResponse.json(
+    return json(
       {
         error:
           err instanceof Error
@@ -253,7 +254,7 @@ async function handleGenerarCedula(request: Request) {
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error de IA";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return json({ error: msg }, { status: 500 });
   }
 
   if (interpretacion.juzgado) {
@@ -281,7 +282,7 @@ async function handleGenerarCedula(request: Request) {
       interpretacion,
     }));
   } catch (err) {
-    return NextResponse.json(
+    return json(
       { error: err instanceof Error ? err.message : "Error al guardar datos" },
       { status: 500 }
     );
@@ -299,7 +300,7 @@ async function handleGenerarCedula(request: Request) {
       planAtGeneration: aiQuota.effectivePlan,
     });
   } catch (err) {
-    return NextResponse.json(
+    return json(
       { error: err instanceof Error ? err.message : "Error al generar documento" },
       { status: 500 }
     );
@@ -314,5 +315,5 @@ async function handleGenerarCedula(request: Request) {
     documentos_count: generado.documentos_count,
   };
 
-  return NextResponse.json(response, { status: 201 });
+  return json(response, { status: 201 });
 }

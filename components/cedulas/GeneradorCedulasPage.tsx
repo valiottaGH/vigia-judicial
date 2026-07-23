@@ -120,6 +120,7 @@ export default function GeneradorCedulasPage({
     try {
       const res = await fetch("/api/cedulas/generar", {
         method: "POST",
+        credentials: "same-origin",
         body: formData,
       });
       const data = await parseJsonResponse<
@@ -127,8 +128,13 @@ export default function GeneradorCedulasPage({
       >(res);
 
       if (!res.ok) {
+        if (data.code === "UNAUTHORIZED") {
+          setError("Sesión expirada. Volvé a iniciar sesión.");
+          return;
+        }
         if (data.code === "INVALID_FILE_TYPE") {
           showToast(data.error ?? INVALID_ADJUNTO_MESSAGE);
+          return;
         }
         if (data.code === "MEMBRETE_INCOMPLETE") {
           setError(data.error ?? MEMBRETE_REQUIRED_MESSAGE);
