@@ -29,6 +29,12 @@ async function extractPdfText(buffer: Uint8Array): Promise<string> {
   try {
     const result = await parser.getText();
     return truncate(result.text ?? "");
+  } catch (err) {
+    throw new Error(
+      err instanceof Error
+        ? `No se pudo leer el PDF: ${err.message}`
+        : "No se pudo leer el PDF"
+    );
   } finally {
     await parser.destroy();
   }

@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "app/api/cedulas/generar/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}

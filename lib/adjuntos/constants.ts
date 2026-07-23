@@ -1,6 +1,7 @@
 export const ADJUNTOS_BUCKET = "expediente-adjuntos";
 
-export const MAX_ADJUNTO_BYTES = 15 * 1024 * 1024; // 15 MB
+/** Límite compatible con Vercel Serverless (~4.5 MB de body). */
+export const MAX_ADJUNTO_BYTES = 4 * 1024 * 1024;
 
 export const ALLOWED_ADJUNTO_EXTENSIONS = [".pdf", ".doc", ".docx"] as const;
 

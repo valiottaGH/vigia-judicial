@@ -28,11 +28,31 @@ import {
 import { getPlan } from "@/lib/subscription/plans";
 import { isAdminEmail } from "@/lib/auth/admin";
 
+export const maxDuration = 60;
+export const runtime = "nodejs";
+
 export async function GET() {
   return NextResponse.json({ ai_disponible: isAiConfigured() });
 }
 
 export async function POST(request: Request) {
+  try {
+    return await handleGenerarCedula(request);
+  } catch (err) {
+    console.error("[cedulas/generar]", err);
+    return NextResponse.json(
+      {
+        error:
+          err instanceof Error
+            ? err.message
+            : "Error interno al generar la cédula",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+async function handleGenerarCedula(request: Request) {
   const supabase = await createClient();
   const {
     data: { user },

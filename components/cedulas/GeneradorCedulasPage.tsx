@@ -9,8 +9,10 @@ import {
   ADJUNTO_ACCEPT,
   INVALID_ADJUNTO_MESSAGE,
   isAllowedAdjuntoFile,
+  MAX_ADJUNTO_BYTES,
 } from "@/lib/adjuntos/constants";
 import type { GenerarCedulaResponse } from "@/lib/cedulas/types";
+import { parseJsonResponse } from "@/lib/api/parse-json-response";
 import { MEMBRETE_REQUIRED_MESSAGE } from "@/lib/profile/membrete";
 import type { AiQuota } from "@/lib/subscription/entitlements";
 import { quotaUsageLabel } from "@/lib/subscription/entitlements";
@@ -67,6 +69,13 @@ export default function GeneradorCedulasPage({
       return;
     }
 
+    if (file.size > MAX_ADJUNTO_BYTES) {
+      showToast("El archivo supera 4 MB. Usá un PDF más liviano.");
+      setArchivos([]);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
     setArchivos([file]);
     setError(null);
   }
@@ -113,10 +122,9 @@ export default function GeneradorCedulasPage({
         method: "POST",
         body: formData,
       });
-      const data = (await res.json()) as GenerarCedulaResponse & {
-        error?: string;
-        code?: string;
-      };
+      const data = await parseJsonResponse<
+        GenerarCedulaResponse & { error?: string; code?: string }
+      >(res);
 
       if (!res.ok) {
         if (data.code === "INVALID_FILE_TYPE") {
@@ -135,8 +143,10 @@ export default function GeneradorCedulasPage({
       }
 
       setResultado(data);
-    } catch {
-      setError("Error de conexión");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Error de conexión. Reintentá."
+      );
     } finally {
       setLoading(false);
     }
@@ -247,7 +257,7 @@ export default function GeneradorCedulasPage({
             onRemove={removeFile}
             chooseLabel="Elegir archivo"
             addMoreLabel="Cambiar archivo"
-            hint="Formatos aceptados: .pdf, .doc, .docx"
+            hint="Formatos: .pdf, .doc, .docx — máx. 4 MB"
           />
         </div>
 
