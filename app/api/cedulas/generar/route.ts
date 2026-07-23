@@ -130,7 +130,16 @@ async function handleGenerarCedula(request: NextRequest) {
     );
   }
 
-  const formData = await request.formData();
+  const formData = await request.formData().catch(() => null);
+  if (!formData) {
+    return json(
+      {
+        error: "No se pudo leer el archivo enviado. Debe pesar menos de 4 MB.",
+        code: "PAYLOAD_TOO_LARGE",
+      },
+      { status: 413 }
+    );
+  }
   const numero = String(formData.get("numero") ?? "").trim();
   const caratula = String(formData.get("caratula") ?? "").trim();
   const file = formData.get("file");

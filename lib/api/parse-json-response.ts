@@ -29,8 +29,13 @@ export async function parseJsonResponse<T>(res: Response): Promise<T> {
       throw new Error("Sesión expirada. Volvé a iniciar sesión.");
     }
     if (text.trimStart().startsWith("<!") || text.includes("<html")) {
+      if (res.status === 500 || res.status === 503) {
+        throw new Error(
+          "El servidor tardó demasiado o falló al procesar el PDF (error 500). Probá con un archivo más liviano o reintentá en unos segundos. Si persiste, revisá Vercel → Logs."
+        );
+      }
       throw new Error(
-        `Error del servidor (${res.status}). Revisá la terminal donde corre npm run dev.`
+        `Error del servidor (${res.status}). Reintentá en unos segundos.`
       );
     }
     if (text.startsWith("/login")) {
