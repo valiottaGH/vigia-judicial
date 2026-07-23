@@ -1,7 +1,7 @@
 import type { MembreteProfile } from "@/types";
 
 export const MEMBRETE_REQUIRED_MESSAGE =
-  "Completá tu membrete (nombre y matrícula) en Configuración antes de generar documentos.";
+  "Completá tu membrete (nombre y matrícula) para generar documentos.";
 
 export function isMembreteCompleto(
   profile:

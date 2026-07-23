@@ -34,6 +34,7 @@ export interface GeneradorInput {
   partes: ParteExpediente[];
   abogado: MembreteAbogado;
   userId: string;
+  planAtGeneration?: import("@/lib/subscription/plans").PlanId;
 }
 
 export interface MembreteAbogado {
@@ -132,7 +133,15 @@ async function generarDocumentoIndividual(
 export async function generarPaqueteJudicial(
   input: GeneradorInput
 ): Promise<PaqueteJudicial> {
-  const { request, expediente, resolucion, partes, abogado, userId } = input;
+  const {
+    request,
+    expediente,
+    resolucion,
+    partes,
+    abogado,
+    userId,
+    planAtGeneration = "free",
+  } = input;
 
   const parsed = parseInstruction(request.instruccion ?? "");
   const merged = mergeInstructionWithRequest(parsed, {
@@ -290,6 +299,7 @@ export async function generarPaqueteJudicial(
       zip_url: signedUrl,
       manifest: manifest as unknown as Json,
       documentos_count: documentos.length,
+      plan_at_generation: planAtGeneration,
     } as never);
 
   if (insertError) {

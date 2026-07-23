@@ -39,15 +39,22 @@ export async function PATCH(request: Request) {
 
   const body = (await request.json()) as ActualizarMembreteRequest;
 
+  if (!body.full_name?.trim() || !body.matricula?.trim()) {
+    return NextResponse.json(
+      { error: "Nombre y matrícula son obligatorios." },
+      { status: 400 }
+    );
+  }
+
   const { data, error } = await supabase
     .from("profiles")
     .update({
-      full_name: body.full_name,
-      estudio_nombre: body.estudio_nombre,
-      matricula: body.matricula,
-      domicilio_profesional: body.domicilio_profesional,
-      telefono: body.telefono,
-      ciudad: body.ciudad,
+      full_name: body.full_name.trim(),
+      estudio_nombre: body.estudio_nombre?.trim() || null,
+      matricula: body.matricula.trim(),
+      domicilio_profesional: body.domicilio_profesional?.trim() || null,
+      telefono: body.telefono?.trim() || null,
+      ciudad: body.ciudad?.trim() || null,
     } as never)
     .eq("id", user.id)
     .select(

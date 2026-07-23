@@ -34,7 +34,7 @@ export default async function CuentaPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-primary">Mi cuenta</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Mi cuenta</h1>
         <p className="text-sm text-muted mt-1">
           Perfil, seguridad y suscripcion.
         </p>

@@ -31,7 +31,7 @@ export default function PricingSection() {
             <ul className="mt-4 space-y-2 flex-1">
               {plan.features.map((f) => (
                 <li key={f} className="text-sm flex items-start gap-2">
-                  <span className="text-success shrink-0">✓</span>
+                  <span className="text-primary shrink-0 font-semibold">✓</span>
                   {f}
                 </li>
               ))}

@@ -45,7 +45,7 @@ export default function DocumentoGeneradoModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-center space-y-2">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-green-700">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-accent/40 text-primary-dark">
             <CheckIcon />
           </div>
           <h2

@@ -11,6 +11,7 @@ import { generateDocumentoDocxBuffer } from "@/lib/documents/generate-docx";
 import { mapTipoActuacion } from "./interpret-notificacion-ai";
 import type { InterpretacionNotificacion } from "./types";
 import type { MembreteProfile } from "@/types";
+import type { PlanId } from "@/lib/subscription/plans";
 
 const STORAGE_BUCKET = "actuaciones";
 
@@ -60,6 +61,7 @@ export async function generarDocumentoDesdeInterpretacion(input: {
   partes: ParteExpediente[];
   interpretacion: InterpretacionNotificacion;
   profile: MembreteProfile | null;
+  planAtGeneration: PlanId;
 }): Promise<{
   actuacion_id: string;
   download_url: string;
@@ -124,6 +126,7 @@ export async function generarDocumentoDesdeInterpretacion(input: {
         tipo: "carta_documento",
         resumen: input.interpretacion.resumen,
       },
+      plan_at_generation: input.planAtGeneration,
     } as never);
 
     return {
@@ -173,6 +176,7 @@ export async function generarDocumentoDesdeInterpretacion(input: {
     partes: input.partes,
     abogado,
     userId: input.userId,
+    planAtGeneration: input.planAtGeneration,
   });
 
   return {

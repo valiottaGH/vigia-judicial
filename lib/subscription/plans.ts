@@ -32,7 +32,7 @@ export const PLANES: PlanDefinition[] = [
     precioArs: 0,
     descripcion: "Para probar el generador con IA.",
     features: [
-      "5 generaciones con IA por mes",
+      "5 generaciones con IA en total",
       "Cédulas y cartas documento",
       "Descarga en Word",
       "Membrete personalizado",

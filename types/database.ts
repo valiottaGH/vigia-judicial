@@ -261,6 +261,7 @@ export interface Database {
           manifest: Json;
           documentos_count: number;
           source_content_hash: string | null;
+          plan_at_generation: string;
           created_at: string;
         };
         Insert: {
@@ -277,6 +278,7 @@ export interface Database {
           manifest?: Json;
           documentos_count?: number;
           source_content_hash?: string | null;
+          plan_at_generation?: string;
           created_at?: string;
         };
         Update: {
@@ -293,6 +295,7 @@ export interface Database {
           manifest?: Json;
           documentos_count?: number;
           source_content_hash?: string | null;
+          plan_at_generation?: string;
           created_at?: string;
         };
         Relationships: [];

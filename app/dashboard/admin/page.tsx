@@ -21,7 +21,7 @@ export default async function AdminPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-primary">Administracion</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Administracion</h1>
         <p className="text-sm text-muted mt-1">
           Gestioná el plan y el estado de cada usuario registrado.
         </p>

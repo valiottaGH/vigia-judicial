@@ -45,7 +45,7 @@ export default function ConfigMembreteForm({
 
   const fields = [
     { key: "full_name", label: "Nombre completo (abogado/a) *" },
-    { key: "estudio_nombre", label: "Nombre del estudio" },
+    { key: "estudio_nombre", label: "Nombre del estudio (opcional)" },
     { key: "matricula", label: "Matrícula CPASF *" },
     { key: "domicilio_profesional", label: "Domicilio profesional" },
     { key: "telefono", label: "Telefono" },
@@ -55,7 +55,7 @@ export default function ConfigMembreteForm({
   return (
     <form onSubmit={handleSubmit} className="max-w-xl space-y-4">
       <p className="text-sm text-muted">
-        Nombre y matrícula son obligatorios para generar cédulas con IA.
+        Solo nombre y matrícula son obligatorios. El resto es opcional.
       </p>
 
       {fields.map(({ key, label }) => (

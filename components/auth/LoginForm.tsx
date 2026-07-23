@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import AppLogo from "@/components/layout/AppLogo";
+import { buildAuthCallbackUrl } from "@/lib/auth/redirect";
 import { createClient } from "@/lib/supabase/client";
 
 function authErrorMessage(raw: string): string {
@@ -58,10 +60,13 @@ export default function LoginForm() {
     setGoogleLoading(true);
     resetFormErrors();
 
-    const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirect)}`;
+    const callbackUrl = buildAuthCallbackUrl(window.location.origin, redirect);
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: callbackUrl },
+      options: {
+        redirectTo: callbackUrl,
+        queryParams: { prompt: "select_account" },
+      },
     });
 
     if (oauthError) {
@@ -111,7 +116,7 @@ export default function LoginForm() {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirect)}`,
+          emailRedirectTo: buildAuthCallbackUrl(window.location.origin, redirect),
         },
       });
 
@@ -147,7 +152,10 @@ export default function LoginForm() {
     <main className="min-h-screen flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary">Fast Cedu</h1>
+          <div className="flex justify-center mb-3">
+            <AppLogo size="lg" showText={false} />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900">Fast Cedu</h1>
           <p className="text-muted mt-2">
             {isSignUp ? "Crea tu cuenta" : "Inicia sesion en tu cuenta"}
           </p>
@@ -155,7 +163,7 @@ export default function LoginForm() {
 
         <div className="bg-card border border-border rounded-xl p-8 shadow-sm space-y-5">
           {sessionExpired && !error && (
-            <div className="p-3 rounded-lg bg-amber-50 text-amber-800 text-sm">
+            <div className="p-3 rounded-lg bg-accent/30 border border-accent text-gray-900 text-sm">
               Tu sesion expiro por inactividad o tiempo maximo. Inicia sesion de nuevo.
             </div>
           )}
@@ -163,7 +171,7 @@ export default function LoginForm() {
             <div className="p-3 rounded-lg bg-red-50 text-danger text-sm">{error}</div>
           )}
           {message && (
-            <div className="p-3 rounded-lg bg-green-50 text-success text-sm">{message}</div>
+            <div className="p-3 rounded-lg bg-accent/25 border border-accent text-success text-sm">{message}</div>
           )}
 
           <button

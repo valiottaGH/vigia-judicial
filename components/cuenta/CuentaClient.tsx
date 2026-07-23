@@ -54,21 +54,21 @@ export default function CuentaClient({
 
       {activeTab === "perfil" && (
         <section className="max-w-xl">
-          <h2 className="text-lg font-semibold text-primary mb-4">Datos de cuenta</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Datos de cuenta</h2>
           <AccountForm initial={profile} email={email} />
         </section>
       )}
 
       {activeTab === "seguridad" && (
         <section className="max-w-xl">
-          <h2 className="text-lg font-semibold text-primary mb-4">Seguridad</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Seguridad</h2>
           <PasswordForm email={email} />
         </section>
       )}
 
       {activeTab === "suscripcion" && (
         <section className="max-w-2xl">
-          <h2 className="text-lg font-semibold text-primary mb-4">Suscripcion</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Suscripcion</h2>
           <SubscriptionPanel
             plan={plan}
             status={subscriptionStatus}

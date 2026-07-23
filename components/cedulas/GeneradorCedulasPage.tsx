@@ -13,6 +13,7 @@ import {
 import type { GenerarCedulaResponse } from "@/lib/cedulas/types";
 import { MEMBRETE_REQUIRED_MESSAGE } from "@/lib/profile/membrete";
 import type { AiQuota } from "@/lib/subscription/entitlements";
+import { quotaUsageLabel } from "@/lib/subscription/entitlements";
 
 interface GeneradorCedulasPageProps {
   aiDisponible: boolean;
@@ -150,7 +151,7 @@ export default function GeneradorCedulasPage({
       )}
 
       <div className="text-center">
-        <h1 className="text-2xl md:text-3xl font-bold text-primary">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
           Generar cédula con IA
         </h1>
         <p className="text-sm text-muted mt-2 leading-relaxed">
@@ -161,7 +162,7 @@ export default function GeneradorCedulasPage({
       </div>
 
       {!aiDisponible && (
-        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-900">
+        <div className="p-4 rounded-xl bg-accent/25 border border-accent text-sm text-gray-900">
           Configurá{" "}
           <code className="text-xs">OPENROUTER_API_KEY</code> en{" "}
           <code className="text-xs">.env.local</code> para habilitar la
@@ -169,28 +170,16 @@ export default function GeneradorCedulasPage({
         </div>
       )}
 
-      {!membreteCompleto && (
-        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-900">
-          {MEMBRETE_REQUIRED_MESSAGE}{" "}
-          <Link
-            href="/dashboard/configuracion"
-            className="text-primary font-medium hover:underline"
-          >
-            Completar membrete
-          </Link>
-        </div>
-      )}
-
       {aiQuota.limit !== null && (
         <div
           className={`p-4 rounded-xl border text-sm ${
             aiQuota.canGenerate
-              ? "bg-background border-border text-muted"
-              : "bg-amber-50 border-amber-200 text-amber-900"
+              ? "bg-surface border-border text-muted"
+              : "bg-accent-light/40 border-accent text-gray-900"
           }`}
         >
-          Plan {planNombre}: {aiQuota.usedThisMonth} / {aiQuota.limit}{" "}
-          generaciones con IA este mes.
+          Plan {planNombre}: {aiQuota.used} / {aiQuota.limit}{" "}
+          generaciones con IA {quotaUsageLabel(aiQuota.usagePeriod)}.
           {!aiQuota.canGenerate && (
             <>
               {" "}
@@ -207,7 +196,7 @@ export default function GeneradorCedulasPage({
 
       {aiQuota.limit === null && (
         <p className="text-center text-xs text-muted">
-          Admin — generaciones sin límite ({aiQuota.usedThisMonth} este mes)
+          Admin — generaciones sin límite ({aiQuota.used} este mes)
         </p>
       )}
 

@@ -24,12 +24,16 @@
 
 **Authentication → URL Configuration**
 
-- Site URL: tu dominio (ej. `https://fast-cedu.vercel.app`)
-- Redirect URLs:
-  ```
-  https://tu-app.vercel.app/auth/callback
-  http://localhost:3000/auth/callback
-  ```
+- **Site URL**: tu dominio de produccion (ej. `https://fast-cedu.vercel.app`)
+- **Redirect URLs** — agregar **todas** las URLs de callback (obligatorio para Google y email):
+
+```
+http://localhost:3000/auth/callback
+http://127.0.0.1:3000/auth/callback
+https://tu-app.vercel.app/auth/callback
+```
+
+Si falta `localhost`, Google te redirige a la Site URL (Vercel) aunque desarrolles en local.
 
 ### 3. Vercel
 
@@ -73,11 +77,11 @@ En **Supabase → Authentication → Settings** podes acortar JWT expiry o refre
 
 ## Planes (Gratis, Pro, Business)
 
-| Plan | Generaciones IA / mes | Precio |
-|------|------------------------|--------|
-| Gratis | 5 | $0 |
-| Pro | 500 | $5.000 ARS / mes |
-| Business | 1.500 | $10.000 ARS / mes |
+| Plan | Generaciones IA | Precio |
+|------|-----------------|--------|
+| Gratis | 5 en total (de por vida) | $0 |
+| Pro | 500 / mes | $5.000 ARS / mes |
+| Business | 1.500 / mes | $10.000 ARS / mes |
 
 - Definicion en codigo: `lib/subscription/plans.ts` y `lib/subscription/entitlements.ts`
 - Migracion `011_business_plan.sql` agrega el plan `business` en Supabase

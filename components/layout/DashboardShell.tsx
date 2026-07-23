@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import AppLogo from "@/components/layout/AppLogo";
 import { createClient } from "@/lib/supabase/client";
 import VolverInicioLink from "@/components/layout/VolverInicioLink";
+import MembreteAlertBanner from "@/components/profile/MembreteAlertBanner";
 
 const USER_LINKS = [
   { href: "/dashboard/configuracion", label: "Configuración" },
@@ -18,11 +20,13 @@ export default function DashboardShell({
   userEmail,
   planLabel,
   isAdmin = false,
+  membreteCompleto = true,
 }: {
   children: React.ReactNode;
   userEmail: string;
   planLabel?: string;
   isAdmin?: boolean;
+  membreteCompleto?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -61,14 +65,18 @@ export default function DashboardShell({
         <div className="px-3 md:px-6 h-12 md:h-16 flex items-center justify-between gap-3 md:gap-4 max-w-4xl mx-auto w-full">
           <Link
             href="/dashboard"
-            className={`inline-flex items-center shrink-0 rounded-lg border px-2.5 py-1.5 md:px-3 md:py-2 text-sm md:text-base font-bold transition-all ${
+            className={`inline-flex items-center shrink-0 rounded-lg border px-2 py-1 md:px-2.5 md:py-1.5 transition-all ${
               isHome
-                ? "border-primary bg-primary text-white shadow-sm"
-                : "border-primary/60 bg-primary/5 text-primary hover:bg-primary/10 hover:border-primary"
+                ? "border-primary bg-primary shadow-sm"
+                : "border-primary/60 bg-primary/5 hover:bg-primary/10 hover:border-primary"
             }`}
             aria-current={isHome ? "page" : undefined}
           >
-            Fast Cedu
+            <AppLogo
+              size="sm"
+              showText
+              textClassName={`text-sm md:text-base ${isHome ? "text-white" : "text-primary"}`}
+            />
           </Link>
 
           <div className="relative shrink-0" ref={menuRef}>
@@ -123,7 +131,7 @@ export default function DashboardShell({
                 <button
                   type="button"
                   onClick={() => void logout()}
-                  className="w-full text-left px-4 py-2 text-sm text-danger hover:bg-red-50"
+                  className="w-full text-left px-4 py-2 text-sm text-danger hover:bg-accent/20"
                 >
                   Cerrar sesión
                 </button>
@@ -136,6 +144,7 @@ export default function DashboardShell({
       <main className="flex-1 p-4 md:p-8">
         <div className="max-w-4xl mx-auto w-full space-y-4">
           {!isHome && <VolverInicioLink />}
+          {!membreteCompleto && <MembreteAlertBanner />}
           {children}
         </div>
       </main>

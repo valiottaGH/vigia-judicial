@@ -101,7 +101,7 @@ export default function AdminUsersPanel() {
         <div className="p-3 rounded-lg bg-red-50 text-danger text-sm">{error}</div>
       )}
       {message && (
-        <div className="p-3 rounded-lg bg-green-50 text-success text-sm">
+        <div className="p-3 rounded-lg bg-accent/25 border border-accent text-success text-sm">
           {message}
         </div>
       )}

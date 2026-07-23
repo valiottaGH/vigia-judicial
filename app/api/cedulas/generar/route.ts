@@ -95,9 +95,11 @@ export async function POST(request: Request) {
 
   if (!aiQuota.canGenerate) {
     const planNombre = getPlan(aiQuota.effectivePlan).nombre;
+    const periodo =
+      aiQuota.usagePeriod === "lifetime" ? "en total" : "este mes";
     return NextResponse.json(
       {
-        error: `Alcanzaste el límite de ${aiQuota.limit} generaciones con IA este mes (plan ${planNombre}). Mejorá tu plan para seguir generando.`,
+        error: `Alcanzaste el límite de ${aiQuota.limit} generaciones con IA ${periodo} (plan ${planNombre}). Mejorá tu plan para seguir generando.`,
         code: "PLAN_LIMIT",
         quota: aiQuota,
         upgrade_url: "/dashboard/cuenta?tab=suscripcion",
@@ -274,6 +276,7 @@ export async function POST(request: Request) {
       partes,
       interpretacion,
       profile: profileData as MembreteProfile,
+      planAtGeneration: aiQuota.effectivePlan,
     });
   } catch (err) {
     return NextResponse.json(

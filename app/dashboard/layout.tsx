@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import SessionGuard from "@/components/auth/SessionGuard";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { createClient } from "@/lib/supabase/server";
+import { isMembreteCompleto } from "@/lib/profile/membrete";
 import {
   effectivePlanId,
   parseSubscriptionStatus,
@@ -46,9 +47,11 @@ export default async function DashboardLayout({
   const supabase = await createClient();
   const { data: profilePlan } = await supabase
     .from("profiles")
-    .select("plan, subscription_status, is_admin")
+    .select("plan, subscription_status, is_admin, full_name, matricula")
     .eq("id", user.id)
     .maybeSingle();
+
+  const membreteCompleto = isMembreteCompleto(profilePlan);
 
   const isAdmin = await isProfileAdmin(supabase, user.id, user.email);
 
@@ -64,6 +67,7 @@ export default async function DashboardLayout({
         userEmail={user.email ?? ""}
         planLabel={planLabel}
         isAdmin={isAdmin}
+        membreteCompleto={membreteCompleto}
       >
         {children}
       </DashboardShell>
