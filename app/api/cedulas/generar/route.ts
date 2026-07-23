@@ -212,6 +212,8 @@ async function handleGenerarCedula(request: NextRequest) {
       expedienteId,
       adjuntoId,
       file,
+      mime: fileMime,
+      buffer: bytes,
     });
   } catch (err) {
     return json(

@@ -44,26 +44,33 @@ export async function uploadAdjuntoToStorage(input: {
   userId: string;
   expedienteId: string;
   adjuntoId: string;
-  file: File;
+  file: Pick<File, "name" | "size">;
+  mime: AllowedAdjuntoMime;
+  buffer: Uint8Array;
 }): Promise<string> {
-  const mime = validateAdjuntoFile(input.file);
+  if (input.buffer.byteLength === 0) {
+    throw new AdjuntoError("El archivo llegó vacío al servidor", "INVALID_TYPE");
+  }
 
   const safeName = sanitizeFilename(input.file.name);
   const storagePath = `${input.userId}/${input.expedienteId}/${input.adjuntoId}_${safeName}`;
 
-  const buffer = new Uint8Array(await input.file.arrayBuffer());
   const admin = createServiceClient();
 
   const { error } = await admin.storage
     .from(ADJUNTOS_BUCKET)
-    .upload(storagePath, buffer, {
-      contentType: mime,
+    .upload(storagePath, input.buffer, {
+      contentType: input.mime,
       upsert: false,
     });
 
   if (error) {
+    const detail =
+      error.message && error.message !== "HTTP 400 error"
+        ? error.message
+        : "Revisá permisos del bucket o probá con otro archivo";
     throw new AdjuntoError(
-      `No se pudo subir el archivo: ${error.message}. Verificá que el bucket "${ADJUNTOS_BUCKET}" exista en Supabase Storage.`,
+      `No se pudo subir el archivo: ${detail}`,
       "STORAGE"
     );
   }
