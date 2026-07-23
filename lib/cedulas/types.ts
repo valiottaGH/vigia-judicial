@@ -1,6 +1,22 @@
 import type { RolParte, TipoActuacion } from "@/lib/actuaciones/types";
 
-export type TipoDocumentoGenerado = TipoActuacion | "carta_documento";
+export type TipoDocumentoGenerado = TipoActuacion | "carta_documento" | "liquidacion_honorarios";
+
+export interface ConceptoLiquidacion {
+  descripcion: string;
+  base: string | null;
+  monto: string;
+}
+
+export interface LiquidacionHonorarios {
+  tipo_honorarios: string | null;
+  base_regulatoria: string | null;
+  conceptos: ConceptoLiquidacion[];
+  subtotal: string | null;
+  iva: string | null;
+  total: string | null;
+  moneda: string | null;
+}
 
 export interface ParteInterpretada {
   nombre: string;
@@ -20,6 +36,7 @@ export interface InterpretacionNotificacion {
   juzgado: string | null;
   jurisdiccion: string | null;
   partes: ParteInterpretada[];
+  liquidacion?: LiquidacionHonorarios;
   variables_carta?: {
     destinatario?: string;
     domicilio_destinatario?: string;

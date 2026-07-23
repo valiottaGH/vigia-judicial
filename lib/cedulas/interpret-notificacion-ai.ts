@@ -17,13 +17,17 @@ const TIPOS_DOC_VALIDOS = [
   "mandamiento",
   "notificacion_electronica",
   "carta_documento",
+  "liquidacion_honorarios",
 ] as const;
 
 function buildSystemPrompt(): string {
   return [
     "Sos un asistente jurídico para abogados en Argentina.",
     "Tu ÚNICO propósito es analizar proveídos, notificaciones y resoluciones del Poder Judicial, y redactar la respuesta procesal que el letrado debe presentar o notificar.",
-    "Ejemplos de trámites válidos: notificar partes, designar o aceptar peritos, contestar traslados, cumplir vistas, presentar liquidaciones, responder oficios judiciales, mandamientos, cédulas, notificaciones electrónicas.",
+    "Ejemplos de trámites válidos: notificar partes, designar o aceptar peritos, contestar traslados, cumplir vistas, presentar liquidaciones de honorarios, responder oficios judiciales, mandamientos, cédulas, notificaciones electrónicas.",
+    "",
+    "LIQUIDACIÓN DE HONORARIOS: si el proveído ordena regular, presentar, acompañar o dar traslado de liquidación de honorarios profesionales (regulación, etapas, pericia, etc.), usá tipo_tramite=liquidacion y tipo_documento=liquidacion_honorarios.",
+    "En liquidaciones, completá el objeto liquidacion con conceptos desglosados (descripción, base regulatoria o cálculo, monto) y total. Redactá texto_respuesta como escrito formal al tribunal solicitando se tenga por presentada la liquidación.",
     "",
     "PASO 1 — Evaluá si el texto cargado es un trámite judicial real.",
     "Si el documento NO es una notificación/proveído/resolución/oficio judicial, o no permite identificar qué debe hacer el abogado en el proceso, respondé con apto=false.",
@@ -58,13 +62,24 @@ Devolvé JSON:
   "apto": true,
   "motivo_rechazo": null,
   "tipo_tramite": "peritos | notificar_partes | liquidacion | ...",
-  "tipo_documento": "cedula | oficio | mandamiento | notificacion_electronica | carta_documento",
+  "tipo_documento": "cedula | oficio | mandamiento | notificacion_electronica | carta_documento | liquidacion_honorarios",
   "resumen": "una oración",
   "texto_proveido": "texto del proveído",
   "texto_respuesta": "cuerpo de la respuesta para el documento",
   "fecha_resolucion": "YYYY-MM-DD o null",
   "juzgado": "nombre del juzgado o null",
   "jurisdiccion": "provincia o null",
+  "liquidacion": {
+    "tipo_honorarios": "regulacion | etapa_procesal | pericia | acordados | otro",
+    "base_regulatoria": "arancel/lema aplicable o null",
+    "conceptos": [
+      { "descripcion": "Honorarios etapa declarativa", "base": "Arancel CPASF / % sobre monto", "monto": "$ 150.000" }
+    ],
+    "subtotal": "$ 150.000",
+    "iva": null,
+    "total": "$ 150.000",
+    "moneda": "ARS"
+  },
   "partes": [
     { "nombre": "Juan", "apellido": "Pérez", "rol": "demandado", "domicilio": "...", "notificar": true }
   ],
@@ -118,6 +133,47 @@ function assertDocumentoApto(raw: Record<string, unknown>): void {
   );
 }
 
+function parseLiquidacion(
+  raw: Record<string, unknown> | undefined
+): import("./types").LiquidacionHonorarios | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+
+  const conceptos = Array.isArray(raw.conceptos)
+    ? raw.conceptos
+        .map((c) => {
+          const item = c as Record<string, unknown>;
+          const descripcion = String(item.descripcion ?? "").trim();
+          const monto = String(item.monto ?? "").trim();
+          if (!descripcion && !monto) return null;
+          return {
+            descripcion: descripcion || "Concepto",
+            base: item.base ? String(item.base) : null,
+            monto: monto || "A determinar",
+          };
+        })
+        .filter((c): c is NonNullable<typeof c> => c !== null)
+    : [];
+
+  if (
+    conceptos.length === 0 &&
+    !raw.total &&
+    !raw.subtotal &&
+    !raw.tipo_honorarios
+  ) {
+    return undefined;
+  }
+
+  return {
+    tipo_honorarios: raw.tipo_honorarios ? String(raw.tipo_honorarios) : null,
+    base_regulatoria: raw.base_regulatoria ? String(raw.base_regulatoria) : null,
+    conceptos,
+    subtotal: raw.subtotal ? String(raw.subtotal) : null,
+    iva: raw.iva ? String(raw.iva) : null,
+    total: raw.total ? String(raw.total) : null,
+    moneda: raw.moneda ? String(raw.moneda) : "ARS",
+  };
+}
+
 function normalizeInterpretacion(
   raw: Record<string, unknown>
 ): InterpretacionNotificacion {
@@ -135,10 +191,17 @@ function normalizeInterpretacion(
     : [];
 
   const vars = raw.variables_carta as Record<string, unknown> | undefined;
+  const liquidacion = parseLiquidacion(
+    raw.liquidacion as Record<string, unknown> | undefined
+  );
+
+  const tipoTramite = String(raw.tipo_tramite ?? "otras");
+  const tipoDocFinal =
+    tipoTramite === "liquidacion" ? "liquidacion_honorarios" : tipo_documento;
 
   return {
-    tipo_tramite: String(raw.tipo_tramite ?? "otras"),
-    tipo_documento,
+    tipo_tramite: tipoTramite,
+    tipo_documento: tipoDocFinal,
     resumen: String(raw.resumen ?? "Trámite judicial detectado"),
     texto_proveido: String(raw.texto_proveido ?? "").trim() || "[Proveído no identificado]",
     texto_respuesta: String(raw.texto_respuesta ?? "").trim() || "[Completar respuesta]",
@@ -148,6 +211,7 @@ function normalizeInterpretacion(
     juzgado: raw.juzgado ? String(raw.juzgado) : null,
     jurisdiccion: raw.jurisdiccion ? String(raw.jurisdiccion) : null,
     partes,
+    liquidacion,
     variables_carta: vars
       ? {
           destinatario: vars.destinatario ? String(vars.destinatario) : undefined,
@@ -195,6 +259,6 @@ export async function interpretarNotificacion(input: {
 export function mapTipoActuacion(
   tipo: InterpretacionNotificacion["tipo_documento"]
 ): TipoActuacion {
-  if (tipo === "carta_documento") return "cedula";
+  if (tipo === "carta_documento" || tipo === "liquidacion_honorarios") return "cedula";
   return tipo;
 }

@@ -6,7 +6,7 @@ import type { GenerarCedulaResponse } from "@/lib/cedulas/types";
 const TRAMITE_LABELS: Record<string, string> = {
   peritos: "Designación / pericia",
   notificar_partes: "Notificar a las partes",
-  liquidacion: "Liquidación",
+  liquidacion: "Liquidación de honorarios",
   traslado: "Traslado",
   vista_causa: "Vista de causa",
   otras: "Otro trámite",
@@ -24,9 +24,11 @@ export default function DocumentoGeneradoModal({
   const docLabel =
     resultado.interpretacion.tipo_documento === "carta_documento"
       ? "Carta documento"
-      : TIPOS_ACTUACION_LABELS[
-          resultado.interpretacion.tipo_documento as keyof typeof TIPOS_ACTUACION_LABELS
-        ] ?? "Documento";
+      : resultado.interpretacion.tipo_documento === "liquidacion_honorarios"
+        ? "Liquidación de honorarios"
+        : TIPOS_ACTUACION_LABELS[
+            resultado.interpretacion.tipo_documento as keyof typeof TIPOS_ACTUACION_LABELS
+          ] ?? "Documento";
 
   const tramiteLabel =
     TRAMITE_LABELS[resultado.interpretacion.tipo_tramite] ??

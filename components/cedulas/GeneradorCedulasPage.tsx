@@ -176,7 +176,7 @@ export default function GeneradorCedulasPage({
         </h1>
         <p className="text-sm text-muted mt-2 leading-relaxed">
           Cargá el proveído o notificación del juzgado. La IA solo procesa trámites
-          judiciales (notificar partes, peritos, traslados, liquidación, etc.) y
+          judiciales (notificar partes, peritos, traslados, liquidación de honorarios, etc.) y
           genera la cédula o carta documento con la respuesta.
         </p>
       </div>
