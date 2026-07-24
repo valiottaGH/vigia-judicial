@@ -3,6 +3,7 @@ import { createSupabaseRouteClient } from "@/lib/supabase/route-handler";
 import {
   uploadAdjuntoToStorage,
   validateAdjuntoFile,
+  validateAdjuntoBuffer,
 } from "@/lib/adjuntos/storage";
 import type { AllowedAdjuntoMime } from "@/lib/adjuntos/constants";
 import {
@@ -29,6 +30,12 @@ import {
 } from "@/lib/subscription/entitlements";
 import { getPlan } from "@/lib/subscription/plans";
 import { isAdminEmail } from "@/lib/auth/admin";
+import {
+  checkRateLimit,
+  rateLimitKey,
+  rateLimitResponse,
+} from "@/lib/security/rate-limit";
+import { logSecurityEvent } from "@/lib/security/audit-log";
 
 export const maxDuration = 60;
 export const runtime = "nodejs";
@@ -63,6 +70,15 @@ async function handleGenerarCedula(request: NextRequest) {
 
   if (!user) {
     return json({ error: "No autorizado", code: "UNAUTHORIZED" }, { status: 401 });
+  }
+
+  const rate = await checkRateLimit({
+    key: rateLimitKey("cedulas/generar", request, user.id),
+    limit: 20,
+    windowSeconds: 3600,
+  });
+  if (!rate.ok) {
+    return rateLimitResponse(rate.retryAfterSeconds ?? 3600);
   }
 
   if (!isAiConfigured()) {
@@ -180,6 +196,21 @@ async function handleGenerarCedula(request: NextRequest) {
 
   const bytes = new Uint8Array(await file.arrayBuffer());
 
+  try {
+    validateAdjuntoBuffer(bytes, fileMime);
+  } catch (err) {
+    return json(
+      {
+        error:
+          err instanceof Error
+            ? err.message
+            : INVALID_ADJUNTO_MESSAGE,
+        code: "INVALID_FILE_TYPE",
+      },
+      { status: 400 }
+    );
+  }
+
   let documentoTexto: string;
   try {
     documentoTexto = await extractTextFromBuffer(bytes, fileMime);
@@ -277,6 +308,19 @@ async function handleGenerarCedula(request: NextRequest) {
     tamano_bytes: file.size,
   } as never);
 
+  void logSecurityEvent({
+    userId: user.id,
+    action: "document.upload",
+    resourceType: "expediente_adjunto",
+    resourceId: adjuntoId,
+    metadata: {
+      expediente_id: expedienteId,
+      mime: fileMime,
+      size: file.size,
+    },
+    request,
+  });
+
   if (interpretacion.juzgado) {
     await supabase
       .from("expedientes")
@@ -334,6 +378,18 @@ async function handleGenerarCedula(request: NextRequest) {
     download_filename: generado.download_filename,
     documentos_count: generado.documentos_count,
   };
+
+  void logSecurityEvent({
+    userId: user.id,
+    action: "document.generate_ai",
+    resourceType: "actuacion",
+    resourceId: generado.actuacion_id,
+    metadata: {
+      expediente_id: expedienteId,
+      tipo_documento: documentoSolicitado,
+    },
+    request,
+  });
 
   return json(response, { status: 201 });
 }

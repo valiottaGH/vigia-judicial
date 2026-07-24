@@ -1,5 +1,6 @@
 /** Definicion de planes — cobro via Mercado Pago Checkout Bricks. */
 export type PlanId = "free" | "pro" | "business";
+export type PaidPlanId = Extract<PlanId, "pro" | "business">;
 
 export type SubscriptionStatus =
   | "active"
@@ -103,6 +104,6 @@ export function statusLabel(status: SubscriptionStatus): string {
   return labels[status] ?? status;
 }
 
-export function isPaidPlan(plan: PlanId): boolean {
+export function isPaidPlan(plan: PlanId): plan is PaidPlanId {
   return plan === "pro" || plan === "business";
 }

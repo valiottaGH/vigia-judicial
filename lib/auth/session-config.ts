@@ -8,8 +8,9 @@ export function applySessionCookieOptions(
   return {
     ...options,
     maxAge: SESSION_COOKIE_MAX_AGE_SECONDS,
-    sameSite: "lax",
+    sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
     secure: process.env.NODE_ENV === "production",
+    httpOnly: options.httpOnly ?? true,
     path: "/",
   };
 }

@@ -7,6 +7,7 @@ import {
   type AllowedAdjuntoMime,
 } from "./constants";
 import { sanitizeFilename } from "@/lib/actuaciones/zip";
+import { validateAdjuntoMagicBytes } from "./magic-bytes";
 
 export class AdjuntoError extends Error {
   constructor(
@@ -40,6 +41,18 @@ export function validateAdjuntoFile(file: File): AllowedAdjuntoMime {
   return mime;
 }
 
+export function validateAdjuntoBuffer(
+  buffer: Uint8Array,
+  mime: AllowedAdjuntoMime
+): void {
+  if (!validateAdjuntoMagicBytes(buffer, mime)) {
+    throw new AdjuntoError(
+      "El contenido del archivo no coincide con el formato declarado",
+      "INVALID_TYPE"
+    );
+  }
+}
+
 export async function uploadAdjuntoToStorage(input: {
   userId: string;
   expedienteId: string;
@@ -51,6 +64,8 @@ export async function uploadAdjuntoToStorage(input: {
   if (input.buffer.byteLength === 0) {
     throw new AdjuntoError("El archivo llegó vacío al servidor", "INVALID_TYPE");
   }
+
+  validateAdjuntoBuffer(input.buffer, input.mime);
 
   const safeName = sanitizeFilename(input.file.name);
   const storagePath = `${input.userId}/${input.expedienteId}/${input.adjuntoId}_${safeName}`;

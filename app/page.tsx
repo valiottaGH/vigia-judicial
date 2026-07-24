@@ -31,6 +31,12 @@ export default function HomePage() {
       </div>
 
       <PricingSection />
+
+      <footer className="mt-16 text-center text-sm text-muted space-x-4">
+        <Link href="/privacidad" className="hover:text-primary underline-offset-2 hover:underline">
+          Política de privacidad
+        </Link>
+      </footer>
     </main>
   );
 }

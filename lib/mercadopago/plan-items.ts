@@ -1,6 +1,6 @@
-import { getPlan, getPlanPriceArs, type PlanId } from "@/lib/subscription/plans";
+import { getPlan, getPlanPriceArs, type PaidPlanId, type PlanId } from "@/lib/subscription/plans";
 
-export function getMercadoPagoPlanItem(planId: Extract<PlanId, "pro" | "business">) {
+export function getMercadoPagoPlanItem(planId: PaidPlanId) {
   const plan = getPlan(planId);
   const unitPrice = getPlanPriceArs(planId);
 

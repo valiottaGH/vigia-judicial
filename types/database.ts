@@ -25,6 +25,7 @@ export interface Database {
           subscription_status: string;
           subscription_ends_at: string | null;
           stripe_customer_id: string | null;
+          mercadopago_payer_id: string | null;
           is_admin: boolean;
           created_at: string;
           updated_at: string;
@@ -44,6 +45,7 @@ export interface Database {
           subscription_status?: string;
           subscription_ends_at?: string | null;
           stripe_customer_id?: string | null;
+          mercadopago_payer_id?: string | null;
           is_admin?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -63,6 +65,7 @@ export interface Database {
           subscription_status?: string;
           subscription_ends_at?: string | null;
           stripe_customer_id?: string | null;
+          mercadopago_payer_id?: string | null;
           is_admin?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -405,6 +408,99 @@ export interface Database {
           error_mensaje?: string | null;
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      subscription_payments: {
+        Row: {
+          id: string;
+          user_id: string;
+          plan_id: "pro" | "business";
+          amount_ars: number;
+          mercadopago_payment_id: string | null;
+          mercadopago_preference_id: string | null;
+          status: "pending" | "approved" | "rejected" | "cancelled" | "in_process";
+          external_reference: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          plan_id: "pro" | "business";
+          amount_ars: number;
+          mercadopago_payment_id?: string | null;
+          mercadopago_preference_id?: string | null;
+          status?: "pending" | "approved" | "rejected" | "cancelled" | "in_process";
+          external_reference: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          plan_id?: "pro" | "business";
+          amount_ars?: number;
+          mercadopago_payment_id?: string | null;
+          mercadopago_preference_id?: string | null;
+          status?: "pending" | "approved" | "rejected" | "cancelled" | "in_process";
+          external_reference?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      security_audit_log: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          action: string;
+          resource_type: string | null;
+          resource_id: string | null;
+          metadata: Json;
+          ip_address: string | null;
+          user_agent: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          action: string;
+          resource_type?: string | null;
+          resource_id?: string | null;
+          metadata?: Json;
+          ip_address?: string | null;
+          user_agent?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string | null;
+          action?: string;
+          resource_type?: string | null;
+          resource_id?: string | null;
+          metadata?: Json;
+          ip_address?: string | null;
+          user_agent?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      api_rate_limits: {
+        Row: {
+          bucket_key: string;
+          hits: number;
+          window_start: string;
+        };
+        Insert: {
+          bucket_key: string;
+          hits?: number;
+          window_start?: string;
+        };
+        Update: {
+          bucket_key?: string;
+          hits?: number;
+          window_start?: string;
         };
         Relationships: [];
       };

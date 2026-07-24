@@ -3,13 +3,14 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { buildPaqueteZipFilename } from "@/lib/actuaciones/zip";
 import type { TipoActuacion } from "@/lib/actuaciones/types";
+import { logSecurityEvent } from "@/lib/security/audit-log";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 const STORAGE_BUCKET = "actuaciones";
 
 /** Descarga el ZIP con nombre legible (no UUID de Storage). */
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   const { id } = await context.params;
   const supabase = await createClient();
   const {
@@ -63,6 +64,15 @@ export async function GET(_request: Request, context: RouteContext) {
       );
 
   const buffer = await file.arrayBuffer();
+
+  void logSecurityEvent({
+    userId: user.id,
+    action: "document.download",
+    resourceType: "actuacion",
+    resourceId: id,
+    metadata: { expediente_id: actuacion.expediente_id },
+    request,
+  });
 
   return new NextResponse(buffer, {
     headers: {

@@ -6,6 +6,11 @@ import {
   isAbsoluteSessionExpired,
   SESSION_STARTED_COOKIE,
 } from "@/lib/auth/session-config";
+import { applySecurityHeaders } from "@/lib/security/headers";
+import {
+  EMAIL_NOT_VERIFIED_MESSAGE,
+  isEmailVerified,
+} from "@/lib/security/email-verified";
 
 function redirectToLogin(request: NextRequest, reason?: string) {
   const url = request.nextUrl.clone();
@@ -14,7 +19,7 @@ function redirectToLogin(request: NextRequest, reason?: string) {
   if (reason) url.searchParams.set("reason", reason);
   const response = NextResponse.redirect(url);
   response.cookies.delete(SESSION_STARTED_COOKIE);
-  return response;
+  return applySecurityHeaders(response);
 }
 
 export async function updateSession(request: NextRequest) {
@@ -76,27 +81,49 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/api/cedulas") ||
     request.nextUrl.pathname.startsWith("/api/actuaciones") ||
     request.nextUrl.pathname.startsWith("/api/profile") ||
-    request.nextUrl.pathname.startsWith("/api/admin");
+    request.nextUrl.pathname.startsWith("/api/admin") ||
+    request.nextUrl.pathname.startsWith("/api/billing");
+
+  const requiresVerifiedEmail =
+    request.nextUrl.pathname.startsWith("/api/cedulas") ||
+    request.nextUrl.pathname.startsWith("/api/actuaciones") ||
+    request.nextUrl.pathname.startsWith("/api/billing");
 
   if (!user && isProtectedRoute) {
     if (pathname.startsWith("/api/")) {
-      return NextResponse.json(
-        { error: "No autorizado", code: "UNAUTHORIZED" },
-        { status: 401 }
+      return applySecurityHeaders(
+        NextResponse.json(
+          { error: "No autorizado", code: "UNAUTHORIZED" },
+          { status: 401 }
+        )
       );
     }
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirect", request.nextUrl.pathname);
-    return NextResponse.redirect(url);
+    return applySecurityHeaders(NextResponse.redirect(url));
   }
 
   if (user && isLoginRoute && !isAuthCallback) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     url.search = "";
-    return NextResponse.redirect(url);
+    return applySecurityHeaders(NextResponse.redirect(url));
   }
 
-  return supabaseResponse;
+  if (user && requiresVerifiedEmail && !isEmailVerified(user)) {
+    if (pathname.startsWith("/api/")) {
+      return applySecurityHeaders(
+        NextResponse.json(
+          {
+            error: EMAIL_NOT_VERIFIED_MESSAGE,
+            code: "EMAIL_NOT_VERIFIED",
+          },
+          { status: 403 }
+        )
+      );
+    }
+  }
+
+  return applySecurityHeaders(supabaseResponse);
 }

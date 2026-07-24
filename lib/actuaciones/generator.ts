@@ -270,19 +270,20 @@ export async function generarPaqueteJudicial(
     );
   }
 
-  const { data: urlData } = admin.storage
-    .from(STORAGE_BUCKET)
-    .getPublicUrl(zipPath);
-
-  let signedUrl = urlData.publicUrl;
+  const SIGNED_URL_TTL_SECONDS = 60 * 60;
 
   const { data: signedData, error: signError } = await admin.storage
     .from(STORAGE_BUCKET)
-    .createSignedUrl(zipPath, 60 * 60 * 24 * 7);
+    .createSignedUrl(zipPath, SIGNED_URL_TTL_SECONDS);
 
-  if (!signError && signedData?.signedUrl) {
-    signedUrl = signedData.signedUrl;
+  if (signError || !signedData?.signedUrl) {
+    throw new ActuacionError(
+      "STORAGE_ERROR",
+      "No se pudo generar enlace de descarga seguro"
+    );
   }
+
+  const signedUrl = signedData.signedUrl;
 
   const { error: insertError } = await admin
     .from("actuaciones_generadas")
