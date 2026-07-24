@@ -90,7 +90,7 @@ export default function DocumentoGeneradoModal({
           onClick={onClose}
           className="w-full py-2.5 text-sm font-medium text-muted hover:text-primary transition"
         >
-          Generar otro documento
+          Listo
         </button>
       </div>
     </div>

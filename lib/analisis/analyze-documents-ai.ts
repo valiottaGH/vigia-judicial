@@ -1,6 +1,7 @@
 import { createChatCompletion } from "@/lib/ai/chat";
 import { isAiConfigured, aiConfigErrorMessage } from "@/lib/ai/config";
 import type { CampoExtraccion, CeldaAnalisis, FilaAnalisis, ResultadoAnalisis } from "./types";
+import { parseTramiteDetectado } from "./tramite-detectado";
 
 export { isAiConfigured, aiConfigErrorMessage };
 
@@ -13,14 +14,29 @@ export interface DocumentoParaAnalisis {
 function buildSystemPrompt(campos: CampoExtraccion[]): string {
   return [
     "Sos un asistente jurídico para abogados en Argentina.",
-    "Extraés información estructurada de documentos legales (expedientes, contratos, resoluciones, escritos).",
-    "Para CADA campo solicitado devolvé un objeto con:",
-    '- "valor": la información extraída de forma clara y concisa (o "No encontrado" si no está en el documento)',
-    '- "cita": cita textual breve del documento que respalda el valor (máx. 300 caracteres, texto literal)',
-    "Respondé SOLO JSON válido.",
+    "Analizás documentos de expedientes judiciales y extraés datos estructurados.",
+    "",
+    "PASO 1 — Determiná si el documento exige una ACCIÓN PROCESAL del letrado",
+    "(redactar cédula, oficio, mandamiento, presentar escrito, notificar, etc.).",
+    "- requiere_escrito=true solo si hay proveído, notificación judicial, traslado,",
+    "  vista, liquidación u orden que el abogado deba cumplir o comunicar.",
+    "- requiere_escrito=false si es: mero archivo, contrato sin orden judicial,",
+    "  recibo, noticia, documento ilegible, copia informativa sin plazo ni orden,",
+    "  o cualquier texto donde no corresponda redactar respuesta procesal.",
+    "- Cuando requiere_escrito=false, motivo_sin_escrito debe decir claramente",
+    '  "No hay escrito ni respuesta procesal que realizar" y explicar por qué.',
+    "",
+    "PASO 2 — Si requiere_escrito=true, sugerí:",
+    "- tipo_tramite: peritos | notificar_partes | traslado | liquidacion | vista_causa | otras",
+    "- tipo_documento_sugerido: cedula | oficio | mandamiento",
+    "- descripcion: una oración del trámite pendiente",
+    "",
+    "PASO 3 — Extraé los campos solicitados con valor y cita textual.",
     "",
     "Campos a extraer:",
     ...campos.map((c) => `- ${c.id}: ${c.label} — ${c.descripcion}`),
+    "",
+    "Respondé SOLO JSON válido.",
   ].join("\n");
 }
 
@@ -34,8 +50,15 @@ Texto:
 ${doc.texto}
 ---
 
-Devolvé JSON con esta forma:
+Devolvé JSON:
 {
+  "tramite": {
+    "requiere_escrito": true,
+    "tipo_tramite": "notificar_partes",
+    "tipo_documento_sugerido": "cedula",
+    "descripcion": "Notificar traslado de la demanda a la contraria",
+    "motivo_sin_escrito": null
+  },
   "celdas": {
   ${fieldKeys}
   }
@@ -92,10 +115,13 @@ export async function analizarUnDocumento(
     throw new Error(`Respuesta IA inválida para ${doc.nombre}`);
   }
 
+  const payload = parsed as { tramite?: unknown; celdas?: unknown };
+
   return {
     documento: doc.nombre,
     adjunto_id: doc.adjunto_id,
     celdas: parseCeldas(parsed, campos),
+    tramite: parseTramiteDetectado(payload.tramite),
   };
 }
 
@@ -129,6 +155,13 @@ export async function analizarDocumentosConIA(input: {
           celdas: Object.fromEntries(
             input.campos.map((c) => [c.id, { valor: "Error", cita: "" }])
           ),
+          tramite: {
+            requiere_escrito: false,
+            tipo_tramite: "ninguno",
+            tipo_documento_sugerido: null,
+            descripcion: "Error al analizar",
+            motivo_sin_escrito: "No se pudo analizar este documento",
+          },
         });
       }
     }
@@ -138,13 +171,15 @@ export async function analizarDocumentosConIA(input: {
   if (filas.length > 0) {
     try {
       const overview = filas
-        .map(
-          (f) =>
-            `- ${f.documento}: ${Object.entries(f.celdas)
-              .slice(0, 3)
-              .map(([k, v]) => `${k}=${v.valor}`)
-              .join("; ")}`
-        )
+        .map((f) => {
+          const tr = f.tramite;
+          const tramiteInfo = tr
+            ? tr.requiere_escrito
+              ? `TRÁMITE: ${tr.descripcion} (${tr.tipo_documento_sugerido})`
+              : `SIN ESCRITO: ${tr.motivo_sin_escrito}`
+            : "";
+          return `- ${f.documento}: ${tramiteInfo}`;
+        })
         .join("\n");
 
       resumen = await createChatCompletion({
@@ -152,7 +187,7 @@ export async function analizarDocumentosConIA(input: {
           {
             role: "system",
             content:
-              "Sos un abogado. Resumí en 3-5 oraciones los hallazgos principales del lote de documentos analizados.",
+              "Sos un abogado. Resumí en 3-5 oraciones los hallazgos del lote, indicando cuáles documentos requieren acción procesal y cuáles no.",
           },
           { role: "user", content: overview },
         ],

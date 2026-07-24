@@ -18,7 +18,7 @@ export default function HomePage() {
 
         <ul className="text-left text-sm text-muted space-y-2 max-w-md mx-auto">
           <li>• Tabla automática con citas al documento de origen</li>
-          <li>• Plantillas reutilizables en otras causas</li>
+          <li>• General, contratos o sentencias según el tipo de causa</li>
           <li>• Generación de escritos procesales en un clic</li>
         </ul>
 

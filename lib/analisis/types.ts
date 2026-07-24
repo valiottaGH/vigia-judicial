@@ -1,3 +1,5 @@
+import type { TramiteDetectado } from "./tramite-detectado";
+
 export interface CampoExtraccion {
   id: string;
   label: string;
@@ -13,6 +15,7 @@ export interface FilaAnalisis {
   documento: string;
   adjunto_id: string;
   celdas: Record<string, CeldaAnalisis>;
+  tramite?: TramiteDetectado;
 }
 
 export interface ResultadoAnalisis {

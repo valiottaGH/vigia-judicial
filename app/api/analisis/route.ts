@@ -3,7 +3,7 @@ import { createSupabaseRouteClient } from "@/lib/supabase/route-handler";
 import { isAiConfigured, aiConfigErrorMessage } from "@/lib/ai/config";
 import { camposDesdePlantilla } from "@/lib/analisis/plantillas-sistema";
 import { ejecutarAnalisisDocumentos } from "@/lib/analisis/run-analysis";
-import type { CampoExtraccion, DocumentoAnalisis } from "@/lib/analisis/types";
+import type { DocumentoAnalisis } from "@/lib/analisis/types";
 import {
   checkRateLimit,
   rateLimitKey,
@@ -17,10 +17,7 @@ interface CreateAnalisisBody {
   nombre?: string;
   expedienteId?: string;
   plantillaKey?: string;
-  plantillaId?: string | null;
   adjuntoIds?: string[];
-  guardarPlantilla?: boolean;
-  nombrePlantilla?: string;
 }
 
 export async function GET(request: NextRequest) {
@@ -101,27 +98,9 @@ export async function POST(request: NextRequest) {
     return json({ error: "Seleccioná al menos un documento" }, { status: 400 });
   }
 
-  let plantillaCampos: CampoExtraccion[] | null = null;
-  let plantillaId: string | null = body.plantillaId ?? null;
-
-  if (plantillaId) {
-    const { data: custom } = await supabase
-      .from("analisis_plantillas")
-      .select("campos")
-      .eq("id", plantillaId)
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (custom?.campos) {
-      plantillaCampos = custom.campos as CampoExtraccion[];
-    } else {
-      plantillaId = null;
-    }
-  }
-
   const campos = camposDesdePlantilla({
-    plantillaKey: plantillaId ? null : plantillaKey,
-    plantillaCampos,
+    plantillaKey,
+    plantillaCampos: null,
   });
 
   const { data: created, error: insertError } = await supabase
@@ -130,8 +109,8 @@ export async function POST(request: NextRequest) {
       user_id: user.id,
       nombre,
       expediente_id: expedienteId || null,
-      plantilla_id: plantillaId,
-      plantilla_key: plantillaId ? null : plantillaKey,
+      plantilla_id: null,
+      plantilla_key: plantillaKey,
       campos: campos as never,
       adjunto_ids: adjuntoIds,
       estado: "borrador",
@@ -141,14 +120,6 @@ export async function POST(request: NextRequest) {
 
   if (insertError || !created) {
     return json({ error: insertError?.message ?? "Error al crear" }, { status: 500 });
-  }
-
-  if (body.guardarPlantilla && body.nombrePlantilla?.trim()) {
-    await supabase.from("analisis_plantillas").insert({
-      user_id: user.id,
-      nombre: body.nombrePlantilla.trim(),
-      campos: campos as never,
-    } as never);
   }
 
   for (const adjuntoId of adjuntoIds) {

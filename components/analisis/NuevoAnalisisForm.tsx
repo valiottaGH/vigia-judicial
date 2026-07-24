@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import FilePickerField from "@/components/files/FilePickerField";
 import {
   ADJUNTO_ACCEPT,
-  INVALID_ADJUNTO_MESSAGE,
   isAllowedAdjuntoFile,
   MAX_ADJUNTO_BYTES,
   maxAdjuntoSizeLabel,
@@ -13,16 +12,9 @@ import {
 } from "@/lib/adjuntos/constants";
 import { uploadAdjuntoFromBrowser } from "@/lib/adjuntos/upload-client";
 import { PLANTILLAS_SISTEMA } from "@/lib/analisis/plantillas-sistema";
-import type { AnalisisPlantilla } from "@/lib/analisis/types";
 import { parseJsonResponse } from "@/lib/api/parse-json-response";
 
-interface NuevoAnalisisFormProps {
-  plantillasPersonalizadas: AnalisisPlantilla[];
-}
-
-export default function NuevoAnalisisForm({
-  plantillasPersonalizadas,
-}: NuevoAnalisisFormProps) {
+export default function NuevoAnalisisForm() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -30,10 +22,7 @@ export default function NuevoAnalisisForm({
   const [numero, setNumero] = useState("");
   const [caratula, setCaratula] = useState("");
   const [plantillaKey, setPlantillaKey] = useState("general");
-  const [plantillaId, setPlantillaId] = useState<string | null>(null);
   const [archivos, setArchivos] = useState<File[]>([]);
-  const [guardarPlantilla, setGuardarPlantilla] = useState(false);
-  const [nombrePlantilla, setNombrePlantilla] = useState("");
   const [loading, setLoading] = useState(false);
   const [progreso, setProgreso] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -157,11 +146,8 @@ export default function NuevoAnalisisForm({
         body: JSON.stringify({
           nombre: nombre.trim(),
           expedienteId: prep.expedienteId,
-          plantillaKey: plantillaId ? undefined : plantillaKey,
-          plantillaId,
+          plantillaKey,
           adjuntoIds: reg.adjuntoIds,
-          guardarPlantilla,
-          nombrePlantilla: guardarPlantilla ? nombrePlantilla.trim() : undefined,
         }),
       });
 
@@ -231,13 +217,13 @@ export default function NuevoAnalisisForm({
       </div>
 
       <div>
-        <span className="block text-sm font-medium mb-2">Plantilla *</span>
+        <span className="block text-sm font-medium mb-2">Tipo de análisis *</span>
         <div className="grid gap-2 sm:grid-cols-3">
           {PLANTILLAS_SISTEMA.map((p) => (
             <label
               key={p.key}
               className={`flex cursor-pointer flex-col rounded-lg border p-3 ${
-                !plantillaId && plantillaKey === p.key
+                plantillaKey === p.key
                   ? "border-primary bg-primary/5 ring-2 ring-primary/20"
                   : "border-border"
               }`}
@@ -245,12 +231,9 @@ export default function NuevoAnalisisForm({
               <span className="flex items-center gap-2">
                 <input
                   type="radio"
-                  name="plantilla"
-                  checked={!plantillaId && plantillaKey === p.key}
-                  onChange={() => {
-                    setPlantillaKey(p.key);
-                    setPlantillaId(null);
-                  }}
+                  name="tipo_analisis"
+                  checked={plantillaKey === p.key}
+                  onChange={() => setPlantillaKey(p.key)}
                 />
                 <span className="text-sm font-semibold">{p.nombre}</span>
               </span>
@@ -258,29 +241,6 @@ export default function NuevoAnalisisForm({
             </label>
           ))}
         </div>
-
-        {plantillasPersonalizadas.length > 0 && (
-          <div className="mt-3">
-            <label className="block text-xs text-muted mb-1">
-              Plantilla personalizada
-            </label>
-            <select
-              value={plantillaId ?? ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                setPlantillaId(v || null);
-              }}
-              className="w-full px-3 py-2 border border-border rounded-lg text-sm"
-            >
-              <option value="">— Usar plantilla del sistema —</option>
-              {plantillasPersonalizadas.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
       </div>
 
       <div>
@@ -301,24 +261,6 @@ export default function NuevoAnalisisForm({
           hint={`PDF, DOC, DOCX — máx. ${maxAdjuntoSizeLabel()} c/u. Podés cargar muchos archivos.`}
         />
       </div>
-
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={guardarPlantilla}
-          onChange={(e) => setGuardarPlantilla(e.target.checked)}
-        />
-        Guardar campos como plantilla reutilizable
-      </label>
-
-      {guardarPlantilla && (
-        <input
-          value={nombrePlantilla}
-          onChange={(e) => setNombrePlantilla(e.target.value)}
-          placeholder="Nombre de la plantilla"
-          className="w-full px-3 py-2 border border-border rounded-lg text-sm"
-        />
-      )}
 
       {progreso && (
         <p className="text-sm text-primary font-medium">{progreso}</p>

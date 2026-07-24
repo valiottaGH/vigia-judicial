@@ -65,7 +65,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const adjuntoId = body.adjuntoId?.trim();
-  const documentoSolicitado = parseDocumentoSolicitado(body.tipo_documento ?? "");
 
   if (!adjuntoId) {
     return json({ error: "Seleccioná un documento de la tabla" }, { status: 400 });
@@ -85,7 +84,24 @@ export async function POST(request: NextRequest, context: RouteContext) {
     );
   }
 
-  const analisis = analisisRow as DocumentoAnalisis;
+  const analisis = analisisRow as unknown as DocumentoAnalisis;
+
+  const fila = analisis.resultado?.filas.find((f) => f.adjunto_id === adjuntoId);
+  if (fila?.tramite && !fila.tramite.requiere_escrito) {
+    return json(
+      {
+        error:
+          fila.tramite.motivo_sin_escrito ??
+          "No hay escrito ni respuesta procesal que realizar para este documento.",
+        code: "SIN_ESCRITO",
+      },
+      { status: 422 }
+    );
+  }
+
+  const documentoSolicitado = parseDocumentoSolicitado(
+    body.tipo_documento ?? fila?.tramite?.tipo_documento_sugerido ?? "cedula"
+  );
 
   const { data: profileData } = await supabase
     .from("profiles")
