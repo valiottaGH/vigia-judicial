@@ -1,7 +1,7 @@
 export const ADJUNTOS_BUCKET = "expediente-adjuntos";
 
-/** Límite compatible con Vercel Serverless (~4.5 MB de body). */
-export const MAX_ADJUNTO_BYTES = 4 * 1024 * 1024;
+/** Límite por archivo (subida directa a Supabase Storage; bucket hasta 50 MB). */
+export const MAX_ADJUNTO_BYTES = 20 * 1024 * 1024;
 
 export const ALLOWED_ADJUNTO_EXTENSIONS = [".pdf", ".doc", ".docx"] as const;
 
@@ -49,6 +49,10 @@ export function formatAdjuntoSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export function maxAdjuntoSizeLabel(): string {
+  return formatAdjuntoSize(MAX_ADJUNTO_BYTES);
 }
 
 export function adjuntoExtension(mime: string): string {

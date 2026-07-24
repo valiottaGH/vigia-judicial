@@ -25,6 +25,7 @@ Supabase Auth aplica rate limiting en sus endpoints. Además, la app limita:
 
 - **Tránsito:** TLS 1.2+ (Vercel + Supabase). HSTS activo en producción.
 - **Reposo:** buckets privados (`expediente-adjuntos`, `actuaciones`) con cifrado server-side de Supabase/S3.
+- **Subida:** directa del navegador a Storage (hasta 20 MB por archivo; bucket 50 MB).
 - **URLs firmadas:** expiran en 1 h; descarga principal vía proxy autenticado `/api/actuaciones/[id]/descargar`.
 - **Validación de archivos:** MIME + magic bytes (PDF, DOC, DOCX).
 - **Auditoría:** tabla `security_audit_log` — subida, generación IA y descarga.
@@ -79,5 +80,4 @@ MERCADOPAGO_WEBHOOK_SECRET=tu-clave-secreta-webhook
 
 - Pentest básico antes de escalar usuarios.
 - MFA obligatorio para cuentas con plan Business.
-- Subida directa a Storage (presigned URLs) para archivos > 4 MB.
 - Job de retención/borrado automático de adjuntos antiguos.

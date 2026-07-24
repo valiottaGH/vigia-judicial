@@ -4,13 +4,17 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import AppLogo from "@/components/layout/AppLogo";
-import { createClient } from "@/lib/supabase/client";
-import VolverInicioLink from "@/components/layout/VolverInicioLink";
 import MembreteAlertBanner from "@/components/profile/MembreteAlertBanner";
+import { createClient } from "@/lib/supabase/client";
 
 const USER_LINKS = [
   { href: "/dashboard/configuracion", label: "Configuración" },
   { href: "/dashboard/cuenta?tab=perfil", label: "Mi cuenta" },
+];
+
+const MODULE_LINKS = [
+  { href: "/dashboard/analisis", label: "Análisis IA" },
+  { href: "/dashboard/generar", label: "Generar escrito" },
 ];
 
 const ADMIN_LINK = { href: "/dashboard/admin", label: "Administración" };
@@ -34,7 +38,10 @@ export default function DashboardShell({
   const menuRef = useRef<HTMLDivElement>(null);
 
   const initials = userEmail.slice(0, 2).toUpperCase();
-  const isHome = pathname === "/dashboard";
+  const isHome =
+    pathname === "/dashboard" ||
+    pathname.startsWith("/dashboard/analisis") ||
+    pathname.startsWith("/dashboard/generar");
 
   async function logout() {
     const supabase = createClient();
@@ -64,7 +71,7 @@ export default function DashboardShell({
       <header className="sticky top-0 z-30 border-b border-border bg-card shadow-sm">
         <div className="px-3 md:px-6 h-12 md:h-16 flex items-center justify-between gap-3 md:gap-4 max-w-4xl mx-auto w-full">
           <Link
-            href="/dashboard"
+            href="/dashboard/analisis"
             className={`inline-flex items-center shrink-0 rounded-lg border px-2 py-1 md:px-2.5 md:py-1.5 transition-all ${
               isHome
                 ? "border-primary bg-primary shadow-sm"
@@ -141,9 +148,32 @@ export default function DashboardShell({
         </div>
       </header>
 
+      <nav className="border-b border-border bg-card/80">
+        <div className="max-w-4xl mx-auto w-full px-3 md:px-6 flex gap-1 overflow-x-auto">
+          {MODULE_LINKS.map((item) => {
+            const active =
+              item.href === "/dashboard/analisis"
+                ? pathname.startsWith("/dashboard/analisis")
+                : pathname.startsWith("/dashboard/generar");
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                  active
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted hover:text-primary"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+
       <main className="flex-1 p-4 md:p-8">
         <div className="max-w-4xl mx-auto w-full space-y-4">
-          {!isHome && <VolverInicioLink />}
           {!membreteCompleto && <MembreteAlertBanner />}
           {children}
         </div>

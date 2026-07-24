@@ -10,7 +10,10 @@ import {
   INVALID_ADJUNTO_MESSAGE,
   isAllowedAdjuntoFile,
   MAX_ADJUNTO_BYTES,
+  maxAdjuntoSizeLabel,
+  resolveAdjuntoMime,
 } from "@/lib/adjuntos/constants";
+import { uploadAdjuntoFromBrowser } from "@/lib/adjuntos/upload-client";
 import type { GenerarCedulaResponse } from "@/lib/cedulas/types";
 import {
   DOCUMENTOS_SOLICITADOS,
@@ -75,7 +78,7 @@ export default function GeneradorCedulasPage({
     }
 
     if (file.size > MAX_ADJUNTO_BYTES) {
-      showToast("El archivo supera 4 MB. Usá un PDF más liviano.");
+      showToast(`El archivo supera ${maxAdjuntoSizeLabel()}.`);
       setArchivos([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
@@ -117,17 +120,62 @@ export default function GeneradorCedulasPage({
     setError(null);
     setResultado(null);
 
-    const formData = new FormData();
-    formData.append("numero", numero.trim());
-    formData.append("caratula", caratula.trim());
-    formData.append("tipo_documento", tipoDocumento);
-    formData.append("file", archivos[0]);
+    const file = archivos[0];
+    const mimeType = resolveAdjuntoMime(file);
 
     try {
+      const prepRes = await fetch("/api/cedulas/preparar", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          numero: numero.trim(),
+          caratula: caratula.trim(),
+          fileName: file.name,
+        }),
+      });
+      const prep = await parseJsonResponse<{
+        expedienteId?: string;
+        adjuntoId?: string;
+        storagePath?: string;
+        error?: string;
+        code?: string;
+      }>(prepRes);
+
+      if (!prepRes.ok) {
+        if (prep.code === "UNAUTHORIZED") {
+          setError("Sesión expirada. Volvé a iniciar sesión.");
+          return;
+        }
+        setError(prep.error ?? "Error al preparar la subida");
+        return;
+      }
+
+      if (!prep.expedienteId || !prep.adjuntoId || !prep.storagePath) {
+        setError("No se pudo preparar la subida del archivo");
+        return;
+      }
+
+      await uploadAdjuntoFromBrowser({
+        storagePath: prep.storagePath,
+        file,
+      });
+
       const res = await fetch("/api/cedulas/generar", {
         method: "POST",
         credentials: "same-origin",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          numero: numero.trim(),
+          caratula: caratula.trim(),
+          tipo_documento: tipoDocumento,
+          expedienteId: prep.expedienteId,
+          adjuntoId: prep.adjuntoId,
+          storagePath: prep.storagePath,
+          fileName: file.name,
+          fileSize: file.size,
+          mimeType,
+        }),
       });
       const data = await parseJsonResponse<
         GenerarCedulaResponse & { error?: string; code?: string }
@@ -309,7 +357,7 @@ export default function GeneradorCedulasPage({
             onRemove={removeFile}
             chooseLabel="Elegir archivo"
             addMoreLabel="Cambiar archivo"
-            hint="Formatos: .pdf, .doc, .docx — máx. 4 MB"
+            hint={`Formatos: .pdf, .doc, .docx — máx. ${maxAdjuntoSizeLabel()}`}
           />
         </div>
 
@@ -326,7 +374,7 @@ export default function GeneradorCedulasPage({
           }
           className="w-full py-3 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-hover disabled:opacity-50"
         >
-          {loading ? "Interpretando y generando…" : "Generar escrito con IA"}
+          {loading ? "Subiendo y generando…" : "Generar escrito con IA"}
         </button>
       </form>
     </div>

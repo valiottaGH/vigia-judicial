@@ -5,15 +5,23 @@ import PricingSection from "@/components/marketing/PricingSection";
 export default function HomePage() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
-      <div className="max-w-lg text-center space-y-6">
+      <div className="max-w-2xl text-center space-y-6">
         <div className="space-y-2 flex flex-col items-center">
           <AppLogo size="xl" showText={false} />
           <h1 className="text-4xl font-bold text-primary">Fast Cedu</h1>
           <p className="text-muted text-lg leading-relaxed">
-            Cargá la notificación del juzgado y la IA genera la cédula o carta
-            documento con la respuesta automáticamente.
+            Revisá cientos de documentos en minutos con IA. Extraé montos,
+            fechas, partes y cláusulas sin abrir cada archivo — y generá la
+            cédula, oficio o mandamiento desde los resultados.
           </p>
         </div>
+
+        <ul className="text-left text-sm text-muted space-y-2 max-w-md mx-auto">
+          <li>• Tabla automática con citas al documento de origen</li>
+          <li>• Plantillas reutilizables en otras causas</li>
+          <li>• Generación de escritos procesales en un clic</li>
+        </ul>
+
         <div className="flex flex-wrap gap-3 justify-center">
           <Link
             href="/login"

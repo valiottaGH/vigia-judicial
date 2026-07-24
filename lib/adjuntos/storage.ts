@@ -45,11 +45,58 @@ export function validateAdjuntoBuffer(
   buffer: Uint8Array,
   mime: AllowedAdjuntoMime
 ): void {
+  if (buffer.byteLength > MAX_ADJUNTO_BYTES) {
+    throw new AdjuntoError(
+      `El archivo supera el límite de ${MAX_ADJUNTO_BYTES / (1024 * 1024)} MB`,
+      "TOO_LARGE"
+    );
+  }
   if (!validateAdjuntoMagicBytes(buffer, mime)) {
     throw new AdjuntoError(
       "El contenido del archivo no coincide con el formato declarado",
       "INVALID_TYPE"
     );
+  }
+}
+
+export function buildAdjuntoStoragePath(input: {
+  userId: string;
+  expedienteId: string;
+  adjuntoId: string;
+  fileName: string;
+}): string {
+  const safeName = sanitizeFilename(input.fileName);
+  return `${input.userId}/${input.expedienteId}/${input.adjuntoId}_${safeName}`;
+}
+
+export function assertAdjuntoStoragePathOwnedByUser(
+  storagePath: string,
+  userId: string,
+  expedienteId: string,
+  adjuntoId: string
+): void {
+  const expectedPrefix = `${userId}/${expedienteId}/${adjuntoId}_`;
+  if (!storagePath.startsWith(expectedPrefix)) {
+    throw new AdjuntoError("Ruta de archivo inválida", "NOT_FOUND");
+  }
+}
+
+export function validateAdjuntoMetadata(input: {
+  fileName: string;
+  fileSize: number;
+  mime: AllowedAdjuntoMime;
+}): void {
+  if (input.fileSize <= 0) {
+    throw new AdjuntoError("El archivo está vacío", "INVALID_TYPE");
+  }
+  if (input.fileSize > MAX_ADJUNTO_BYTES) {
+    throw new AdjuntoError(
+      `El archivo supera el límite de ${MAX_ADJUNTO_BYTES / (1024 * 1024)} MB`,
+      "TOO_LARGE"
+    );
+  }
+  if (!resolveAdjuntoMime({ name: input.fileName, type: input.mime })) {
+    throw new AdjuntoError(INVALID_ADJUNTO_MESSAGE, "INVALID_TYPE");
   }
 }
 
@@ -67,8 +114,12 @@ export async function uploadAdjuntoToStorage(input: {
 
   validateAdjuntoBuffer(input.buffer, input.mime);
 
-  const safeName = sanitizeFilename(input.file.name);
-  const storagePath = `${input.userId}/${input.expedienteId}/${input.adjuntoId}_${safeName}`;
+  const storagePath = buildAdjuntoStoragePath({
+    userId: input.userId,
+    expedienteId: input.expedienteId,
+    adjuntoId: input.adjuntoId,
+    fileName: input.file.name,
+  });
 
   const admin = createServiceClient();
 

@@ -79,6 +79,7 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/dashboard") ||
     request.nextUrl.pathname.startsWith("/onboarding") ||
     request.nextUrl.pathname.startsWith("/api/cedulas") ||
+    request.nextUrl.pathname.startsWith("/api/analisis") ||
     request.nextUrl.pathname.startsWith("/api/actuaciones") ||
     request.nextUrl.pathname.startsWith("/api/profile") ||
     request.nextUrl.pathname.startsWith("/api/admin") ||
@@ -86,6 +87,7 @@ export async function updateSession(request: NextRequest) {
 
   const requiresVerifiedEmail =
     request.nextUrl.pathname.startsWith("/api/cedulas") ||
+    request.nextUrl.pathname.startsWith("/api/analisis") ||
     request.nextUrl.pathname.startsWith("/api/actuaciones") ||
     request.nextUrl.pathname.startsWith("/api/billing");
 

@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseRouteClient } from "@/lib/supabase/route-handler";
 import {
-  uploadAdjuntoToStorage,
-  validateAdjuntoFile,
+  assertAdjuntoStoragePathOwnedByUser,
+  downloadAdjuntoFromStorage,
+  validateAdjuntoMetadata,
   validateAdjuntoBuffer,
 } from "@/lib/adjuntos/storage";
 import type { AllowedAdjuntoMime } from "@/lib/adjuntos/constants";
 import {
   INVALID_ADJUNTO_MESSAGE,
+  isAllowedAdjuntoMime,
 } from "@/lib/adjuntos/constants";
 import {
   generarDocumentoDesdeInterpretacion,
@@ -37,8 +39,20 @@ import {
 } from "@/lib/security/rate-limit";
 import { logSecurityEvent } from "@/lib/security/audit-log";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 export const runtime = "nodejs";
+
+interface GenerarCedulaBody {
+  numero?: string;
+  caratula?: string;
+  tipo_documento?: string;
+  expedienteId?: string;
+  adjuntoId?: string;
+  storagePath?: string;
+  fileName?: string;
+  fileSize?: number;
+  mimeType?: string;
+}
 
 export async function GET() {
   return NextResponse.json({ ai_disponible: isAiConfigured() });
@@ -147,22 +161,30 @@ async function handleGenerarCedula(request: NextRequest) {
     );
   }
 
-  const formData = await request.formData().catch(() => null);
-  if (!formData) {
+  let body: GenerarCedulaBody;
+  try {
+    body = (await request.json()) as GenerarCedulaBody;
+  } catch {
     return json(
       {
-        error: "No se pudo leer el archivo enviado. Debe pesar menos de 4 MB.",
-        code: "PAYLOAD_TOO_LARGE",
+        error: "Datos inválidos. Volvé a intentar.",
+        code: "INVALID_REQUEST",
       },
-      { status: 413 }
+      { status: 400 }
     );
   }
-  const numero = String(formData.get("numero") ?? "").trim();
-  const caratula = String(formData.get("caratula") ?? "").trim();
+
+  const numero = String(body.numero ?? "").trim();
+  const caratula = String(body.caratula ?? "").trim();
   const documentoSolicitado = parseDocumentoSolicitado(
-    String(formData.get("tipo_documento") ?? "")
+    String(body.tipo_documento ?? "")
   );
-  const file = formData.get("file");
+  const expedienteId = String(body.expedienteId ?? "").trim();
+  const adjuntoId = String(body.adjuntoId ?? "").trim();
+  const storagePath = String(body.storagePath ?? "").trim();
+  const fileName = String(body.fileName ?? "").trim();
+  const fileSize = Number(body.fileSize ?? 0);
+  const mimeRaw = String(body.mimeType ?? "").trim();
 
   if (!numero || !caratula) {
     return json(
@@ -171,30 +193,74 @@ async function handleGenerarCedula(request: NextRequest) {
     );
   }
 
-  if (!(file instanceof File)) {
+  if (!expedienteId || !adjuntoId || !storagePath || !fileName || !mimeRaw) {
     return json(
-      { error: "Cargá el proveído o notificación en PDF o Word" },
+      { error: "Faltan datos del archivo subido. Volvé a cargar el documento." },
       { status: 400 }
     );
   }
 
-  let fileMime: AllowedAdjuntoMime;
+  if (!isAllowedAdjuntoMime(mimeRaw)) {
+    return json(
+      { error: INVALID_ADJUNTO_MESSAGE, code: "INVALID_FILE_TYPE" },
+      { status: 400 }
+    );
+  }
+
+  const fileMime = mimeRaw as AllowedAdjuntoMime;
+
   try {
-    fileMime = validateAdjuntoFile(file);
+    assertAdjuntoStoragePathOwnedByUser(
+      storagePath,
+      user.id,
+      expedienteId,
+      adjuntoId
+    );
+    validateAdjuntoMetadata({ fileName, fileSize, mime: fileMime });
   } catch (err) {
     return json(
       {
-        error:
-          err instanceof Error && err.message.includes("No se puede subir")
-            ? err.message
-            : INVALID_ADJUNTO_MESSAGE,
+        error: err instanceof Error ? err.message : INVALID_ADJUNTO_MESSAGE,
         code: "INVALID_FILE_TYPE",
       },
       { status: 400 }
     );
   }
 
-  const bytes = new Uint8Array(await file.arrayBuffer());
+  const { data: expedienteRow } = await supabase
+    .from("expedientes")
+    .select("id, numero, caratula, jurisdiccion, juzgado, fuero")
+    .eq("id", expedienteId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!expedienteRow) {
+    return json({ error: "Expediente no encontrado" }, { status: 404 });
+  }
+
+  let expediente = { ...expedienteRow, caratula } as ExpedienteActuaciones;
+
+  let bytes: Uint8Array;
+  try {
+    bytes = await downloadAdjuntoFromStorage(storagePath);
+  } catch (err) {
+    return json(
+      {
+        error:
+          err instanceof Error
+            ? err.message
+            : "No se encontró el archivo subido. Volvé a cargarlo.",
+      },
+      { status: 400 }
+    );
+  }
+
+  if (bytes.byteLength !== fileSize) {
+    return json(
+      { error: "El tamaño del archivo no coincide. Volvé a subirlo." },
+      { status: 400 }
+    );
+  }
 
   try {
     validateAdjuntoBuffer(bytes, fileMime);
@@ -242,84 +308,36 @@ async function handleGenerarCedula(request: NextRequest) {
     return json({ error: msg }, { status: 500 });
   }
 
-  const { data: existente } = await supabase
-    .from("expedientes")
-    .select("id, numero, caratula, jurisdiccion, juzgado, fuero")
-    .eq("user_id", user.id)
-    .eq("numero", numero)
+  const { data: existenteAdjunto } = await supabase
+    .from("expediente_adjuntos")
+    .select("id")
+    .eq("id", adjuntoId)
     .maybeSingle();
 
-  let expediente: ExpedienteActuaciones;
-
-  if (existente) {
-    await supabase
-      .from("expedientes")
-      .update({ caratula } as never)
-      .eq("id", existente.id);
-    expediente = { ...existente, caratula } as ExpedienteActuaciones;
-  } else {
-    const { data: creado, error: createError } = await supabase
-      .from("expedientes")
-      .insert({
-        user_id: user.id,
-        numero,
-        caratula,
-        jurisdiccion: "Santa Fe",
-      } as never)
-      .select("id, numero, caratula, jurisdiccion, juzgado, fuero")
-      .single();
-
-    if (createError || !creado) {
-      return json(
-        { error: createError?.message ?? "Error al crear expediente" },
-        { status: 500 }
-      );
-    }
-    expediente = creado as ExpedienteActuaciones;
-  }
-
-  const expedienteId = expediente.id;
-  const adjuntoId = crypto.randomUUID();
-
-  let storagePath: string;
-  try {
-    storagePath = await uploadAdjuntoToStorage({
-      userId: user.id,
-      expedienteId,
-      adjuntoId,
-      file,
-      mime: fileMime,
-      buffer: bytes,
-    });
-  } catch (err) {
-    return json(
-      { error: err instanceof Error ? err.message : "Error al subir archivo" },
-      { status: 500 }
-    );
-  }
-
-  await supabase.from("expediente_adjuntos").insert({
-    id: adjuntoId,
-    expediente_id: expedienteId,
-    user_id: user.id,
-    nombre_original: file.name,
-    storage_path: storagePath,
-    mime_type: fileMime,
-    tamano_bytes: file.size,
-  } as never);
-
-  void logSecurityEvent({
-    userId: user.id,
-    action: "document.upload",
-    resourceType: "expediente_adjunto",
-    resourceId: adjuntoId,
-    metadata: {
+  if (!existenteAdjunto) {
+    await supabase.from("expediente_adjuntos").insert({
+      id: adjuntoId,
       expediente_id: expedienteId,
-      mime: fileMime,
-      size: file.size,
-    },
-    request,
-  });
+      user_id: user.id,
+      nombre_original: fileName,
+      storage_path: storagePath,
+      mime_type: fileMime,
+      tamano_bytes: fileSize,
+    } as never);
+
+    void logSecurityEvent({
+      userId: user.id,
+      action: "document.upload",
+      resourceType: "expediente_adjunto",
+      resourceId: adjuntoId,
+      metadata: {
+        expediente_id: expedienteId,
+        mime: fileMime,
+        size: fileSize,
+      },
+      request,
+    });
+  }
 
   if (interpretacion.juzgado) {
     await supabase
