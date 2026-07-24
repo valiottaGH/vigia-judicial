@@ -16,6 +16,7 @@ import {
   DocumentoNoAptoError,
   interpretarNotificacion,
 } from "@/lib/cedulas/interpret-notificacion-ai";
+import { parseDocumentoSolicitado } from "@/lib/cedulas/documento-solicitado";
 import { isAiConfigured, aiConfigErrorMessage } from "@/lib/ai/config";
 import type { GenerarCedulaResponse } from "@/lib/cedulas/types";
 import { extractTextFromBuffer } from "@/lib/expedientes/extract-text";
@@ -142,6 +143,9 @@ async function handleGenerarCedula(request: NextRequest) {
   }
   const numero = String(formData.get("numero") ?? "").trim();
   const caratula = String(formData.get("caratula") ?? "").trim();
+  const documentoSolicitado = parseDocumentoSolicitado(
+    String(formData.get("tipo_documento") ?? "")
+  );
   const file = formData.get("file");
 
   if (!numero || !caratula) {
@@ -197,6 +201,7 @@ async function handleGenerarCedula(request: NextRequest) {
       numeroExpediente: numero,
       caratula,
       documentoTexto,
+      documentoSolicitado,
     });
   } catch (err) {
     if (err instanceof DocumentoNoAptoError) {

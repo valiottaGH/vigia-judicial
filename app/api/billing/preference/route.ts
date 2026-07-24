@@ -10,7 +10,8 @@ import {
   isPublicHttpsAppUrl,
 } from "@/lib/mercadopago/config";
 import { buildExternalReference } from "@/lib/mercadopago/references";
-import { getPlan, isPaidPlan, parsePlanId, type PlanId } from "@/lib/subscription/plans";
+import { getMercadoPagoPlanItem } from "@/lib/mercadopago/plan-items";
+import { getPlan, getPlanPriceArs, isPaidPlan, parsePlanId, type PlanId } from "@/lib/subscription/plans";
 
 export async function POST(request: Request) {
   if (!isMercadoPagoConfigured()) {
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
   }
 
   const plan = getPlan(planId);
+  const amountArs = getPlanPriceArs(planId);
   const paymentId = crypto.randomUUID();
   const externalReference = buildExternalReference(user.id, planId, paymentId);
   const baseUrl = getAppBaseUrl();
@@ -55,7 +57,7 @@ export async function POST(request: Request) {
       id: paymentId,
       user_id: user.id,
       plan_id: planId,
-      amount_ars: plan.precioArs,
+      amount_ars: amountArs,
       status: "pending",
       external_reference: externalReference,
     } as never);
@@ -83,16 +85,7 @@ export async function POST(request: Request) {
       back_urls?: { success: string; failure: string; pending: string };
       auto_return?: "approved";
     } = {
-      items: [
-        {
-          id: planId,
-          title: `Fast Cedu — Plan ${plan.nombre}`,
-          description: plan.descripcion,
-          quantity: 1,
-          unit_price: plan.precioArs,
-          currency_id: "ARS",
-        },
-      ],
+      items: [getMercadoPagoPlanItem(planId)],
       payer: {
         email: user.email ?? undefined,
       },
@@ -132,7 +125,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       preferenceId,
-      amount: plan.precioArs,
+      amount: amountArs,
       planId: planId as PlanId,
       planName: plan.nombre,
       externalReference,

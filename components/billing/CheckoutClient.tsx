@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getPlan, type PlanId } from "@/lib/subscription/plans";
+import { formatPlanAmountArs } from "@/lib/mercadopago/plan-items";
 
 const MercadoPagoPaymentBrick = dynamic(
   () => import("@/components/billing/MercadoPagoPaymentBrick"),
@@ -100,6 +101,9 @@ export default function CheckoutClient({ planId, publicKey }: CheckoutClientProp
         <h1 className="text-2xl font-bold text-gray-900 mt-3">
           Pagar plan {plan.nombre}
         </h1>
+        <p className="text-lg font-semibold text-gray-900 mt-3">
+          Total a pagar: {formatPlanAmountArs(planId)}
+        </p>
         <p className="text-sm text-muted mt-1">
           {plan.precio} — acceso por 30 dias. Pagá con tarjeta de credito o debito.
         </p>

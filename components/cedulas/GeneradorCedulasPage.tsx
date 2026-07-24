@@ -12,6 +12,10 @@ import {
   MAX_ADJUNTO_BYTES,
 } from "@/lib/adjuntos/constants";
 import type { GenerarCedulaResponse } from "@/lib/cedulas/types";
+import {
+  DOCUMENTOS_SOLICITADOS,
+  type DocumentoSolicitado,
+} from "@/lib/cedulas/documento-solicitado";
 import { parseJsonResponse } from "@/lib/api/parse-json-response";
 import { MEMBRETE_REQUIRED_MESSAGE } from "@/lib/profile/membrete";
 import type { AiQuota } from "@/lib/subscription/entitlements";
@@ -32,6 +36,7 @@ export default function GeneradorCedulasPage({
 }: GeneradorCedulasPageProps) {
   const [numero, setNumero] = useState("");
   const [caratula, setCaratula] = useState("");
+  const [tipoDocumento, setTipoDocumento] = useState<DocumentoSolicitado>("cedula");
   const [archivos, setArchivos] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,6 +120,7 @@ export default function GeneradorCedulasPage({
     const formData = new FormData();
     formData.append("numero", numero.trim());
     formData.append("caratula", caratula.trim());
+    formData.append("tipo_documento", tipoDocumento);
     formData.append("file", archivos[0]);
 
     try {
@@ -253,6 +259,42 @@ export default function GeneradorCedulasPage({
         </div>
 
         <div>
+          <span className="block text-sm font-medium mb-2">
+            Tipo de escrito a generar *
+          </span>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {DOCUMENTOS_SOLICITADOS.map((doc) => {
+              const selected = tipoDocumento === doc.id;
+              return (
+                <label
+                  key={doc.id}
+                  className={`flex cursor-pointer flex-col rounded-lg border p-3 text-left transition-colors ${
+                    selected
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                      : "border-border hover:border-primary/40"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="tipo_documento"
+                      value={doc.id}
+                      checked={selected}
+                      onChange={() => setTipoDocumento(doc.id)}
+                      className="accent-primary"
+                    />
+                    <span className="text-sm font-semibold text-gray-900">
+                      {doc.label}
+                    </span>
+                  </span>
+                  <span className="mt-1 pl-6 text-xs text-muted">{doc.hint}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
           <span className="block text-sm font-medium mb-1">
             Proveído / notificación judicial *
           </span>
@@ -284,7 +326,7 @@ export default function GeneradorCedulasPage({
           }
           className="w-full py-3 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-hover disabled:opacity-50"
         >
-          {loading ? "Interpretando y generando…" : "Generar cédula con IA"}
+          {loading ? "Interpretando y generando…" : "Generar escrito con IA"}
         </button>
       </form>
     </div>

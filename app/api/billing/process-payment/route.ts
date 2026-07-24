@@ -9,7 +9,8 @@ import {
   mapMercadoPagoStatus,
 } from "@/lib/mercadopago/fulfill-payment";
 import { parseExternalReference } from "@/lib/mercadopago/references";
-import { getPlan, isPaidPlan, parsePlanId, type PlanId } from "@/lib/subscription/plans";
+import { getMercadoPagoPlanItem } from "@/lib/mercadopago/plan-items";
+import { getPlan, getPlanPriceArs, isPaidPlan, parsePlanId, type PlanId } from "@/lib/subscription/plans";
 
 interface ProcessPaymentBody {
   plan?: string;
@@ -47,6 +48,37 @@ export async function POST(request: Request) {
   }
 
   const plan = getPlan(planId);
+  const expectedAmount = getPlanPriceArs(planId);
+  const admin = createServiceClient();
+
+  const { data: pendingPayment } = await admin
+    .from("subscription_payments")
+    .select("id, plan_id, amount_ars, status")
+    .eq("id", parsedRef.paymentId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!pendingPayment) {
+    return NextResponse.json(
+      { error: "Intento de pago no encontrado. Volvé a iniciar el checkout." },
+      { status: 400 }
+    );
+  }
+
+  if (pendingPayment.plan_id !== planId) {
+    return NextResponse.json({ error: "El plan no coincide con el pago" }, { status: 400 });
+  }
+
+  const storedAmount = Number(pendingPayment.amount_ars);
+  if (storedAmount !== expectedAmount) {
+    return NextResponse.json(
+      { error: "Monto del plan desactualizado. Volvé a iniciar el checkout." },
+      { status: 409 }
+    );
+  }
+
+  const chargeAmount = expectedAmount;
+  const mpItem = getMercadoPagoPlanItem(planId);
   const formData = body.formData;
   const issuerId = formData.issuer_id ?? formData.issuerId;
 
@@ -56,13 +88,25 @@ export async function POST(request: Request) {
   try {
     payment = await paymentClient.create({
       body: {
-        transaction_amount: plan.precioArs,
+        transaction_amount: chargeAmount,
         token: String(formData.token ?? ""),
-        description: `Fast Cedu — Plan ${plan.nombre} (30 dias)`,
+        description: mpItem.title,
         installments: Number(formData.installments ?? 1),
         payment_method_id: String(formData.payment_method_id ?? ""),
         issuer_id: issuerId ? Number(issuerId) : undefined,
         external_reference: body.externalReference,
+        additional_info: {
+          items: [
+            {
+              id: mpItem.id,
+              title: mpItem.title,
+              description: mpItem.description,
+              quantity: mpItem.quantity,
+              unit_price: mpItem.unit_price,
+              category_id: "services",
+            },
+          ],
+        },
         payer: {
           email:
             String(
@@ -88,7 +132,6 @@ export async function POST(request: Request) {
 
   let result: { activated: boolean; planId: PlanId | null };
   try {
-    const admin = createServiceClient();
     result = await fulfillMercadoPagoPayment({
       admin,
       externalReference: body.externalReference,

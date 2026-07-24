@@ -1,6 +1,11 @@
 import type { InterpretacionNotificacion, ParteInterpretada } from "./types";
 import type { RolParte, TipoActuacion } from "@/lib/actuaciones/types";
 import { createChatCompletion } from "@/lib/ai/chat";
+import {
+  instruccionDocumentoSolicitado,
+  labelDocumentoSolicitado,
+  type DocumentoSolicitado,
+} from "./documento-solicitado";
 
 export class DocumentoNoAptoError extends Error {
   readonly code = "DOCUMENTO_NO_APTO" as const;
@@ -10,15 +15,6 @@ export class DocumentoNoAptoError extends Error {
     this.name = "DocumentoNoAptoError";
   }
 }
-
-const TIPOS_DOC_VALIDOS = [
-  "cedula",
-  "oficio",
-  "mandamiento",
-  "notificacion_electronica",
-  "carta_documento",
-  "liquidacion_honorarios",
-] as const;
 
 function buildSystemPrompt(): string {
   return [
@@ -48,9 +44,15 @@ function buildUserPrompt(input: {
   numeroExpediente: string;
   caratula: string;
   documentoTexto: string;
+  documentoSolicitado: DocumentoSolicitado;
 }): string {
+  const docLabel = labelDocumentoSolicitado(input.documentoSolicitado);
   return `Expediente Nº ${input.numeroExpediente}
 Carátula: ${input.caratula}
+
+DOCUMENTO SOLICITADO POR EL LETRADO: ${docLabel.toUpperCase()}
+${instruccionDocumentoSolicitado(input.documentoSolicitado)}
+Excepción: si el proveído ordena expresamente una LIQUIDACIÓN DE HONORARIOS, usá tipo_tramite=liquidacion y tipo_documento=liquidacion_honorarios aunque el letrado haya elegido otro tipo.
 
 Texto del proveído / notificación judicial:
 ---
@@ -175,15 +177,9 @@ function parseLiquidacion(
 }
 
 function normalizeInterpretacion(
-  raw: Record<string, unknown>
+  raw: Record<string, unknown>,
+  documentoSolicitado: DocumentoSolicitado
 ): InterpretacionNotificacion {
-  const tipoDoc = String(raw.tipo_documento ?? "cedula").toLowerCase();
-  const tipo_documento = (
-    TIPOS_DOC_VALIDOS.includes(tipoDoc as (typeof TIPOS_DOC_VALIDOS)[number])
-      ? tipoDoc
-      : "cedula"
-  ) as InterpretacionNotificacion["tipo_documento"];
-
   const partes = Array.isArray(raw.partes)
     ? raw.partes
         .map((p) => parseParte(p as Record<string, unknown>))
@@ -197,7 +193,9 @@ function normalizeInterpretacion(
 
   const tipoTramite = String(raw.tipo_tramite ?? "otras");
   const tipoDocFinal =
-    tipoTramite === "liquidacion" ? "liquidacion_honorarios" : tipo_documento;
+    tipoTramite === "liquidacion"
+      ? "liquidacion_honorarios"
+      : documentoSolicitado;
 
   return {
     tipo_tramite: tipoTramite,
@@ -230,17 +228,23 @@ export async function interpretarNotificacion(input: {
   numeroExpediente: string;
   caratula: string;
   documentoTexto: string;
+  documentoSolicitado?: DocumentoSolicitado;
 }): Promise<InterpretacionNotificacion> {
   if (!input.documentoTexto.trim()) {
     throw new Error("No se pudo leer texto del documento cargado.");
   }
+
+  const documentoSolicitado = input.documentoSolicitado ?? "cedula";
 
   const content = await createChatCompletion({
     jsonMode: true,
     temperature: 0.15,
     messages: [
       { role: "system", content: buildSystemPrompt() },
-      { role: "user", content: buildUserPrompt(input) },
+      {
+        role: "user",
+        content: buildUserPrompt({ ...input, documentoSolicitado }),
+      },
     ],
   });
 
@@ -253,7 +257,7 @@ export async function interpretarNotificacion(input: {
 
   assertDocumentoApto(parsed);
 
-  return normalizeInterpretacion(parsed);
+  return normalizeInterpretacion(parsed, documentoSolicitado);
 }
 
 export function mapTipoActuacion(

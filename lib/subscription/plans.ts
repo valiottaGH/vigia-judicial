@@ -14,6 +14,18 @@ export const PLAN_GENERATION_LIMITS: Record<PlanId, number> = {
   business: 1500,
 };
 
+/** Precios en ARS que Mercado Pago debe cobrar (fuente única). */
+export const PAID_PLAN_PRICES_ARS = {
+  pro: 5000,
+  business: 10000,
+} as const;
+
+export function getPlanPriceArs(planId: PlanId): number {
+  if (planId === "pro") return PAID_PLAN_PRICES_ARS.pro;
+  if (planId === "business") return PAID_PLAN_PRICES_ARS.business;
+  return 0;
+}
+
 export interface PlanDefinition {
   id: PlanId;
   nombre: string;
@@ -42,7 +54,7 @@ export const PLANES: PlanDefinition[] = [
     id: "pro",
     nombre: "Pro",
     precio: "$5.000 / mes",
-    precioArs: 5000,
+    precioArs: PAID_PLAN_PRICES_ARS.pro,
     descripcion: "Para abogados que generan cédulas a diario.",
     features: [
       "500 generaciones con IA por mes",
@@ -56,7 +68,7 @@ export const PLANES: PlanDefinition[] = [
     id: "business",
     nombre: "Business",
     precio: "$10.000 / mes",
-    precioArs: 10000,
+    precioArs: PAID_PLAN_PRICES_ARS.business,
     descripcion: "Para estudios jurídicos y equipos.",
     features: [
       "1.500 generaciones con IA por mes",
