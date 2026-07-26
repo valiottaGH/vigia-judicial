@@ -4,17 +4,54 @@ import {
   HeadingLevel,
   Packer,
   Paragraph,
+  SectionType,
   TextRun,
 } from "docx";
-import { htmlToPlainParagraphs } from "./html";
+import {
+  buildMembreteParagraphs,
+  buildTitleParagraph,
+  bodyParagraph,
+  DOCX_FONT,
+  DOCX_HEADING_SIZE,
+  DOCX_PAGE_MARGINS,
+  plainBodyParagraph,
+  type MembreteDocumento,
+  type TextRunSpec,
+} from "./docx-styles";
+import { htmlToBlocks, type HtmlBlock } from "./html";
 
-export interface MembreteDocumento {
-  estudio: string;
-  abogado: string;
-  matricula: string;
-  domicilio: string;
-  telefono: string;
-  ciudad: string;
+export type { MembreteDocumento } from "./docx-styles";
+
+function blockToParagraph(block: HtmlBlock): Paragraph {
+  const runs: TextRunSpec[] =
+    block.type === "list-item"
+      ? [{ text: "• " }, ...block.runs]
+      : block.runs;
+
+  if (block.type === "heading") {
+    return new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 200, after: 200 },
+      children: block.runs.map(
+        (run) =>
+          new TextRun({
+            text: run.text,
+            bold: true,
+            italics: run.italic,
+            size: DOCX_HEADING_SIZE,
+            font: DOCX_FONT,
+          })
+      ),
+      heading:
+        block.level === 1
+          ? HeadingLevel.HEADING_1
+          : block.level === 3
+            ? HeadingLevel.HEADING_3
+            : HeadingLevel.HEADING_2,
+    });
+  }
+
+  return bodyParagraph(runs);
 }
 
 export async function generateDocumentoDocxBuffer(input: {
@@ -22,66 +59,26 @@ export async function generateDocumentoDocxBuffer(input: {
   contenidoHtml: string;
   membrete: MembreteDocumento;
 }): Promise<Uint8Array> {
-  const parrafos = htmlToPlainParagraphs(input.contenidoHtml);
-  const children: Paragraph[] = [];
+  const blocks = htmlToBlocks(input.contenidoHtml);
+  const children: Paragraph[] = [
+    ...buildMembreteParagraphs(input.membrete),
+    buildTitleParagraph(input.titulo),
+    ...blocks.map(blockToParagraph),
+  ];
 
-  children.push(
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: input.membrete.estudio,
-          bold: true,
-          size: 28,
-        }),
-      ],
-      spacing: { after: 80 },
-    })
-  );
+  const doc = new Document({
+    sections: [
+      {
+        properties: {
+          type: SectionType.CONTINUOUS,
+          page: { margin: DOCX_PAGE_MARGINS },
+        },
+        children,
+      },
+    ],
+  });
 
-  const membreteLineas = [
-    input.membrete.abogado,
-    input.membrete.matricula ? `Tº ${input.membrete.matricula} CPASF` : "",
-    input.membrete.domicilio,
-    input.membrete.telefono,
-    input.membrete.ciudad,
-  ].filter(Boolean);
-
-  for (const linea of membreteLineas) {
-    children.push(
-      new Paragraph({
-        children: [new TextRun({ text: linea, size: 20, color: "555555" })],
-        spacing: { after: 40 },
-      })
-    );
-  }
-
-  children.push(new Paragraph({ spacing: { after: 200 } }));
-
-  children.push(
-    new Paragraph({
-      text: input.titulo,
-      heading: HeadingLevel.HEADING_2,
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 240 },
-    })
-  );
-
-  for (const texto of parrafos) {
-    children.push(
-      new Paragraph({
-        alignment: AlignmentType.JUSTIFIED,
-        children: [
-          new TextRun({
-            text: texto,
-            size: 24,
-            font: "Times New Roman",
-          }),
-        ],
-        spacing: { after: 120 },
-      })
-    );
-  }
-
-  const doc = new Document({ sections: [{ children }] });
   return Packer.toBuffer(doc);
 }
+
+export { plainBodyParagraph, buildMembreteParagraphs, buildTitleParagraph };

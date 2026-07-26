@@ -4,30 +4,41 @@ import { parsePdfText } from "@/lib/expedientes/pdf-server";
 
 const MAX_CHARS_PER_FILE = 8000;
 const MAX_TOTAL_CHARS = 24000;
+/** Tope de seguridad al leer texto completo antes de aislar el proveído. */
+const MAX_FULL_TEXT = 500_000;
 
-export async function extractTextFromBuffer(
+export async function extractFullTextFromBuffer(
   buffer: Uint8Array,
   mimeType: string
 ): Promise<string> {
+  const text = await extractTextFromBuffer(buffer, mimeType, { noTruncate: true });
+  return text;
+}
+
+export async function extractTextFromBuffer(
+  buffer: Uint8Array,
+  mimeType: string,
+  opts?: { noTruncate?: boolean }
+): Promise<string> {
   if (mimeType === "application/pdf") {
-    return extractPdfText(buffer);
+    return extractPdfText(buffer, opts?.noTruncate);
   }
   if (
     mimeType ===
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
   ) {
-    return extractDocxText(buffer);
+    return extractDocxText(buffer, opts?.noTruncate);
   }
   if (mimeType === "application/msword") {
-    return extractDocText(buffer);
+    return extractDocText(buffer, opts?.noTruncate);
   }
   throw new Error(`Tipo de archivo no soportado para lectura: ${mimeType}`);
 }
 
-async function extractPdfText(buffer: Uint8Array): Promise<string> {
+async function extractPdfText(buffer: Uint8Array, noTruncate?: boolean): Promise<string> {
   try {
     const text = await parsePdfText(buffer);
-    return truncate(text);
+    return truncate(text, noTruncate);
   } catch (err) {
     throw new Error(
       err instanceof Error
@@ -37,23 +48,24 @@ async function extractPdfText(buffer: Uint8Array): Promise<string> {
   }
 }
 
-async function extractDocxText(buffer: Uint8Array): Promise<string> {
+async function extractDocxText(buffer: Uint8Array, noTruncate?: boolean): Promise<string> {
   const result = await mammoth.extractRawText({
     buffer: Buffer.from(buffer),
   });
-  return truncate(result.value ?? "");
+  return truncate(result.value ?? "", noTruncate);
 }
 
-async function extractDocText(buffer: Uint8Array): Promise<string> {
+async function extractDocText(buffer: Uint8Array, noTruncate?: boolean): Promise<string> {
   const extractor = new WordExtractor();
   const doc = await extractor.extract(Buffer.from(buffer));
-  return truncate(doc.getBody() ?? "");
+  return truncate(doc.getBody() ?? "", noTruncate);
 }
 
-function truncate(text: string): string {
+function truncate(text: string, noTruncate?: boolean): string {
   const cleaned = text.replace(/\s+/g, " ").trim();
-  if (cleaned.length <= MAX_CHARS_PER_FILE) return cleaned;
-  return `${cleaned.slice(0, MAX_CHARS_PER_FILE)}… [texto truncado]`;
+  const limit = noTruncate ? MAX_FULL_TEXT : MAX_CHARS_PER_FILE;
+  if (cleaned.length <= limit) return cleaned;
+  return `${cleaned.slice(0, limit)}… [texto truncado]`;
 }
 
 export function mergeDocumentTexts(

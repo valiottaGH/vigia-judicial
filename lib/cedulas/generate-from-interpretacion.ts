@@ -208,6 +208,9 @@ export async function generarDocumentoDesdeInterpretacion(input: {
     full_name: input.profile?.full_name ?? null,
     matricula: input.profile?.matricula ?? null,
     ciudad: input.profile?.ciudad ?? null,
+    estudio_nombre: input.profile?.estudio_nombre ?? null,
+    domicilio_profesional: input.profile?.domicilio_profesional ?? null,
+    telefono: input.profile?.telefono ?? null,
   };
 
   if (

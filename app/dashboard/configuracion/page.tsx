@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import ConfigMembreteForm from "@/components/config/ConfigMembreteForm";
+import { PERFIL_ESCRITO_SELECT } from "@/lib/profile/perfil-escrito";
 import type { MembreteProfile } from "@/types";
 
 export default async function ConfiguracionPage() {
@@ -10,9 +11,7 @@ export default async function ConfiguracionPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select(
-      "full_name, estudio_nombre, matricula, domicilio_profesional, telefono, ciudad"
-    )
+    .select(PERFIL_ESCRITO_SELECT)
     .eq("id", user!.id)
     .maybeSingle();
 
@@ -21,10 +20,13 @@ export default async function ConfiguracionPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Configuracion</h1>
         <p className="text-sm text-muted mt-1">
-          Membrete del estudio para plantillas y exportacion PDF.
+          Datos de firma y membrete para todos los escritos (categoría 3 — se
+          cargan una sola vez).
         </p>
       </div>
-      <ConfigMembreteForm initial={profile as MembreteProfile | null} />
+      <ConfigMembreteForm
+        initial={profile as MembreteProfile | null}
+      />
     </div>
   );
 }

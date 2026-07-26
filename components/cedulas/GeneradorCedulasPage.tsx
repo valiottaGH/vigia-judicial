@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import DocumentoGeneradoModal from "@/components/cedulas/DocumentoGeneradoModal";
+import ConfirmacionEscritoForm, {
+  respuestasIniciales,
+} from "@/components/cedulas/ConfirmacionEscritoForm";
 import FilePickerField from "@/components/files/FilePickerField";
 import FileUploadToast from "@/components/files/FileUploadToast";
 import {
@@ -15,10 +18,10 @@ import {
 } from "@/lib/adjuntos/constants";
 import { uploadAdjuntoFromBrowser } from "@/lib/adjuntos/upload-client";
 import type { GenerarCedulaResponse } from "@/lib/cedulas/types";
-import {
-  DOCUMENTOS_SOLICITADOS,
-  type DocumentoSolicitado,
-} from "@/lib/cedulas/documento-solicitado";
+import type {
+  PreparacionEscrito,
+  RespuestasEscrito,
+} from "@/lib/cedulas/preparar-escrito";
 import { parseJsonResponse } from "@/lib/api/parse-json-response";
 import { MEMBRETE_REQUIRED_MESSAGE } from "@/lib/profile/membrete";
 import type { AiQuota } from "@/lib/subscription/entitlements";
@@ -39,14 +42,25 @@ export default function GeneradorCedulasPage({
 }: GeneradorCedulasPageProps) {
   const [numero, setNumero] = useState("");
   const [caratula, setCaratula] = useState("");
-  const [tipoDocumento, setTipoDocumento] = useState<DocumentoSolicitado>("cedula");
   const [archivos, setArchivos] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
+  const [analizando, setAnalizando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [resultado, setResultado] = useState<GenerarCedulaResponse | null>(
     null
   );
+  const [paso, setPaso] = useState<"formulario" | "confirmacion">("formulario");
+  const [preparacion, setPreparacion] = useState<PreparacionEscrito | null>(null);
+  const [respuestas, setRespuestas] = useState<RespuestasEscrito>({});
+  const [uploadMeta, setUploadMeta] = useState<{
+    expedienteId: string;
+    adjuntoId: string;
+    storagePath: string;
+    fileName: string;
+    fileSize: number;
+    mimeType: string;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -97,7 +111,7 @@ export default function GeneradorCedulasPage({
     setResultado(null);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleAnalizar(e: React.FormEvent) {
     e.preventDefault();
     if (!numero.trim() || !caratula.trim()) {
       setError("Completá número y carátula del expediente");
@@ -116,12 +130,17 @@ export default function GeneradorCedulasPage({
       return;
     }
 
-    setLoading(true);
+    setAnalizando(true);
     setError(null);
-    setResultado(null);
+    setPreparacion(null);
+    setUploadMeta(null);
 
     const file = archivos[0];
     const mimeType = resolveAdjuntoMime(file);
+    if (!mimeType) {
+      showToast(INVALID_ADJUNTO_MESSAGE);
+      return;
+    }
 
     try {
       const prepRes = await fetch("/api/cedulas/preparar", {
@@ -161,6 +180,70 @@ export default function GeneradorCedulasPage({
         file,
       });
 
+      const meta = {
+        expedienteId: prep.expedienteId,
+        adjuntoId: prep.adjuntoId,
+        storagePath: prep.storagePath,
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType,
+      };
+      setUploadMeta(meta);
+
+      const analizarRes = await fetch("/api/cedulas/preparar-escrito", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          numero: numero.trim(),
+          caratula: caratula.trim(),
+          ...meta,
+        }),
+      });
+
+      const analizarData = await parseJsonResponse<{
+        preparacion?: PreparacionEscrito;
+        error?: string;
+        code?: string;
+      }>(analizarRes);
+
+      if (!analizarRes.ok) {
+        if (analizarData.code === "DOCUMENTO_NO_APTO") {
+          setError(
+            analizarData.error ??
+              "El documento no corresponde a un trámite judicial."
+          );
+          return;
+        }
+        setError(analizarData.error ?? "Error al analizar el documento");
+        return;
+      }
+
+      if (!analizarData.preparacion) {
+        setError("No se pudo analizar el documento");
+        return;
+      }
+
+      setPreparacion(analizarData.preparacion);
+      setRespuestas(respuestasIniciales(analizarData.preparacion));
+      setPaso("confirmacion");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Error de conexión. Reintentá."
+      );
+    } finally {
+      setAnalizando(false);
+    }
+  }
+
+  async function handleGenerar() {
+    if (!uploadMeta || !preparacion) return;
+
+    setLoading(true);
+    setError(null);
+    setResultado(null);
+
+    try {
       const res = await fetch("/api/cedulas/generar", {
         method: "POST",
         credentials: "same-origin",
@@ -168,13 +251,9 @@ export default function GeneradorCedulasPage({
         body: JSON.stringify({
           numero: numero.trim(),
           caratula: caratula.trim(),
-          tipo_documento: tipoDocumento,
-          expedienteId: prep.expedienteId,
-          adjuntoId: prep.adjuntoId,
-          storagePath: prep.storagePath,
-          fileName: file.name,
-          fileSize: file.size,
-          mimeType,
+          respuestas,
+          datos_preparados: preparacion.datos_extraidos,
+          ...uploadMeta,
         }),
       });
       const data = await parseJsonResponse<
@@ -207,6 +286,9 @@ export default function GeneradorCedulasPage({
       }
 
       setResultado(data);
+      setPaso("formulario");
+      setPreparacion(null);
+      setUploadMeta(null);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Error de conexión. Reintentá."
@@ -214,6 +296,17 @@ export default function GeneradorCedulasPage({
     } finally {
       setLoading(false);
     }
+  }
+
+  function volverAlFormulario() {
+    setPaso("formulario");
+    setPreparacion(null);
+    setUploadMeta(null);
+    setError(null);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    await handleAnalizar(e);
   }
 
   return (
@@ -229,9 +322,9 @@ export default function GeneradorCedulasPage({
           Generar cédula con IA
         </h1>
         <p className="text-sm text-muted mt-2 leading-relaxed">
-          Cargá el proveído o notificación del juzgado. La IA solo procesa trámites
-          judiciales (notificar partes, peritos, traslados, liquidación de honorarios, etc.) y
-          genera la cédula o carta documento con la respuesta.
+          Cargá el proveído o notificación del juzgado. La IA lo lee primero,
+          te pide solo lo indispensable y genera un borrador impecable listo
+          para presentar.
         </p>
       </div>
 
@@ -274,6 +367,26 @@ export default function GeneradorCedulasPage({
         </p>
       )}
 
+      {paso === "confirmacion" && preparacion ? (
+        <div className="bg-card border border-border rounded-xl p-6 md:p-8 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Revisá antes de generar
+          </h2>
+          {error && (
+            <div className="p-3 rounded-lg bg-red-50 text-danger text-sm mb-4">
+              {error}
+            </div>
+          )}
+          <ConfirmacionEscritoForm
+            preparacion={preparacion}
+            respuestas={respuestas}
+            onChange={setRespuestas}
+            loading={loading}
+            onConfirm={() => void handleGenerar()}
+            onCancel={volverAlFormulario}
+          />
+        </div>
+      ) : (
       <form
         onSubmit={(e) => void handleSubmit(e)}
         className="bg-card border border-border rounded-xl p-6 md:p-8 space-y-5 shadow-sm"
@@ -307,42 +420,6 @@ export default function GeneradorCedulasPage({
         </div>
 
         <div>
-          <span className="block text-sm font-medium mb-2">
-            Tipo de escrito a generar *
-          </span>
-          <div className="grid gap-2 sm:grid-cols-3">
-            {DOCUMENTOS_SOLICITADOS.map((doc) => {
-              const selected = tipoDocumento === doc.id;
-              return (
-                <label
-                  key={doc.id}
-                  className={`flex cursor-pointer flex-col rounded-lg border p-3 text-left transition-colors ${
-                    selected
-                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                      : "border-border hover:border-primary/40"
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="tipo_documento"
-                      value={doc.id}
-                      checked={selected}
-                      onChange={() => setTipoDocumento(doc.id)}
-                      className="accent-primary"
-                    />
-                    <span className="text-sm font-semibold text-gray-900">
-                      {doc.label}
-                    </span>
-                  </span>
-                  <span className="mt-1 pl-6 text-xs text-muted">{doc.hint}</span>
-                </label>
-              );
-            })}
-          </div>
-        </div>
-
-        <div>
           <span className="block text-sm font-medium mb-1">
             Proveído / notificación judicial *
           </span>
@@ -370,13 +447,14 @@ export default function GeneradorCedulasPage({
         <button
           type="submit"
           disabled={
-            loading || !aiDisponible || !membreteCompleto || !aiQuota.canGenerate
+            analizando || !aiDisponible || !membreteCompleto || !aiQuota.canGenerate
           }
           className="w-full py-3 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-hover disabled:opacity-50"
         >
-          {loading ? "Subiendo y generando…" : "Generar escrito con IA"}
+          {analizando ? "Leyendo documento…" : "Analizar documento"}
         </button>
       </form>
+      )}
     </div>
   );
 }

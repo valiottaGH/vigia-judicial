@@ -10,7 +10,8 @@ import type { PlanId } from "@/lib/subscription/plans";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import { downloadAdjuntoFromStorage } from "@/lib/adjuntos/storage";
-import { extractTextFromBuffer } from "@/lib/expedientes/extract-text";
+import { extraerTextoDocumentoParaIA } from "@/lib/expedientes/preparar-documento-ia";
+import { jurisdiccionLabelDesdeKey } from "@/lib/jurisdicciones/options";
 import type { InterpretacionNotificacion } from "@/lib/cedulas/types";
 import type { DocumentoAnalisis, FilaAnalisis } from "./types";
 
@@ -30,6 +31,8 @@ export async function generarEscritoDesdeAnalisis(input: {
   documentoSolicitado: DocumentoSolicitado;
   profile: MembreteProfile;
   planAtGeneration: PlanId;
+  respuestasUsuario?: Record<string, string>;
+  datosPreparados?: import("@/lib/cedulas/preparar-escrito").DatosExtraidosEscrito;
 }): Promise<{
   actuacion_id: string;
   download_url: string;
@@ -68,32 +71,54 @@ export async function generarEscritoDesdeAnalisis(input: {
   }
 
   const bytes = await downloadAdjuntoFromStorage(adjunto.storage_path);
-  const documentoTexto = await extractTextFromBuffer(bytes, adjunto.mime_type);
+  const { texto: documentoTexto } = await extraerTextoDocumentoParaIA(
+    bytes,
+    adjunto.mime_type
+  );
   const contexto = formatContextoAnalisis(fila);
+
+  let expediente = expedienteRow as ExpedienteActuaciones;
+
+  const jurisdiccionElegida = jurisdiccionLabelDesdeKey(
+    input.respuestasUsuario?.jurisdiccion_plantilla
+  );
+  if (jurisdiccionElegida) {
+    await input.supabase
+      .from("expedientes")
+      .update({ jurisdiccion: jurisdiccionElegida } as never)
+      .eq("id", expediente.id);
+    expediente = { ...expediente, jurisdiccion: jurisdiccionElegida };
+  }
 
   const interpretacion = await interpretarNotificacion({
     numeroExpediente: expedienteRow.numero,
     caratula: expedienteRow.caratula ?? "",
     documentoTexto: `${contexto}\n\n--- DOCUMENTO ORIGINAL ---\n${documentoTexto}`,
     documentoSolicitado: input.documentoSolicitado,
+    contextoAnalisis: contexto,
+    respuestasUsuario: input.respuestasUsuario,
+    datosPreparados: input.datosPreparados,
   });
 
-  let expediente = expedienteRow as ExpedienteActuaciones;
+  let expedienteAfter = expediente;
 
   if (interpretacion.juzgado) {
     await input.supabase
       .from("expedientes")
       .update({ juzgado: interpretacion.juzgado } as never)
       .eq("id", expediente.id);
-    expediente = { ...expediente, juzgado: interpretacion.juzgado };
+    expedienteAfter = { ...expedienteAfter, juzgado: interpretacion.juzgado };
   }
 
-  if (interpretacion.jurisdiccion) {
+  if (interpretacion.jurisdiccion && !jurisdiccionElegida) {
     await input.supabase
       .from("expedientes")
       .update({ jurisdiccion: interpretacion.jurisdiccion } as never)
       .eq("id", expediente.id);
-    expediente = { ...expediente, jurisdiccion: interpretacion.jurisdiccion };
+    expedienteAfter = {
+      ...expedienteAfter,
+      jurisdiccion: interpretacion.jurisdiccion,
+    };
   }
 
   const { resolucion, partes } = await persistirInterpretacion({
@@ -104,7 +129,7 @@ export async function generarEscritoDesdeAnalisis(input: {
 
   const generado = await generarDocumentoDesdeInterpretacion({
     userId: input.userId,
-    expediente,
+    expediente: expedienteAfter,
     resolucion,
     partes,
     interpretacion,

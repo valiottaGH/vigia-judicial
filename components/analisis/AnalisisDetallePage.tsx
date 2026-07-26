@@ -3,15 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import DocumentoGeneradoModal from "@/components/cedulas/DocumentoGeneradoModal";
-import {
-  DOCUMENTOS_SOLICITADOS,
-  type DocumentoSolicitado,
-} from "@/lib/cedulas/documento-solicitado";
+import ConfirmacionEscritoForm, {
+  respuestasIniciales,
+} from "@/components/cedulas/ConfirmacionEscritoForm";
 import { camposDesdePlantilla, getPlantillaSistema } from "@/lib/analisis/plantillas-sistema";
 import { labelTipoTramite } from "@/lib/analisis/tramite-detectado";
 import type { CampoExtraccion, CeldaAnalisis, DocumentoAnalisis } from "@/lib/analisis/types";
 import { parseJsonResponse } from "@/lib/api/parse-json-response";
 import type { GenerarCedulaResponse } from "@/lib/cedulas/types";
+import type {
+  PreparacionEscrito,
+  RespuestasEscrito,
+} from "@/lib/cedulas/preparar-escrito";
 
 interface AnalisisDetallePageProps {
   analisis: DocumentoAnalisis;
@@ -29,11 +32,13 @@ export default function AnalisisDetallePage({
   const [filaSeleccionada, setFilaSeleccionada] = useState<string | null>(
     analisis.adjunto_ids?.[0] ?? null
   );
-  const [tipoDocumento, setTipoDocumento] = useState<DocumentoSolicitado>("cedula");
   const [loading, setLoading] = useState(false);
+  const [preparando, setPreparando] = useState(false);
   const [reanalizando, setReanalizando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generado, setGenerado] = useState<GenerarCedulaResponse | null>(null);
+  const [preparacion, setPreparacion] = useState<PreparacionEscrito | null>(null);
+  const [respuestas, setRespuestas] = useState<RespuestasEscrito>({});
 
   const campos = camposDesdePlantilla({
     plantillaKey: analisis.plantilla_key,
@@ -56,11 +61,10 @@ export default function AnalisisDetallePage({
     (tramiteActivo === undefined && Boolean(filaSeleccionada));
 
   useEffect(() => {
-    const sugerido = filaActiva?.tramite?.tipo_documento_sugerido;
-    if (sugerido) {
-      setTipoDocumento(sugerido);
-    }
-  }, [filaActiva?.adjunto_id, filaActiva?.tramite?.tipo_documento_sugerido]);
+    setPreparacion(null);
+    setRespuestas({});
+    setError(null);
+  }, [filaSeleccionada]);
 
   async function reanalizar() {
     setReanalizando(true);
@@ -95,6 +99,52 @@ export default function AnalisisDetallePage({
     }
   }
 
+  async function prepararEscrito() {
+    if (!filaSeleccionada) {
+      setError("Seleccioná una fila de la tabla (documento base)");
+      return;
+    }
+
+    setPreparando(true);
+    setError(null);
+    setPreparacion(null);
+
+    try {
+      const res = await fetch(
+        `/api/analisis/${analisis.id}/preparar-escrito`,
+        {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            adjuntoId: filaSeleccionada,
+          }),
+        }
+      );
+
+      const data = await parseJsonResponse<{
+        preparacion?: PreparacionEscrito;
+        error?: string;
+        code?: string;
+      }>(res);
+
+      if (!res.ok) {
+        throw new Error(data.error ?? "Error al analizar el documento");
+      }
+
+      if (!data.preparacion) {
+        throw new Error("No se pudo preparar el escrito");
+      }
+
+      setPreparacion(data.preparacion);
+      setRespuestas(respuestasIniciales(data.preparacion));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error");
+    } finally {
+      setPreparando(false);
+    }
+  }
+
   async function generarEscrito() {
     if (!filaSeleccionada) {
       setError("Seleccioná una fila de la tabla (documento base)");
@@ -113,7 +163,8 @@ export default function AnalisisDetallePage({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             adjuntoId: filaSeleccionada,
-            tipo_documento: tipoDocumento,
+            respuestas,
+            datos_preparados: preparacion?.datos_extraidos,
           }),
         }
       );
@@ -134,6 +185,7 @@ export default function AnalisisDetallePage({
         download_filename: data.download_filename,
         documentos_count: data.documentos_count,
       });
+      setPreparacion(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error");
     } finally {
@@ -358,31 +410,9 @@ export default function AnalisisDetallePage({
               )}
 
               <p className="text-sm text-muted">
-                La IA sugiere el tipo de escrito según el documento. Podés
-                cambiarlo antes de generar.
+                Paso 1: subí el proveído. Paso 2: la IA lee el expediente y solo
+                te pide estrategia y datos logísticos que falten.
               </p>
-
-              <div className="grid gap-2 sm:grid-cols-3">
-                {DOCUMENTOS_SOLICITADOS.map((doc) => (
-                  <label
-                    key={doc.id}
-                    className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 ${
-                      tipoDocumento === doc.id
-                        ? "border-primary bg-primary/5"
-                        : "border-border"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="tipo_escrito"
-                      value={doc.id}
-                      checked={tipoDocumento === doc.id}
-                      onChange={() => setTipoDocumento(doc.id)}
-                    />
-                    <span className="text-sm font-medium">{doc.label}</span>
-                  </label>
-                ))}
-              </div>
 
               {error && (
                 <div className="p-3 rounded-lg bg-red-50 text-danger text-sm">
@@ -390,14 +420,28 @@ export default function AnalisisDetallePage({
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={() => void generarEscrito()}
-                disabled={loading}
-                className="w-full sm:w-auto px-6 py-3 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-hover disabled:opacity-50"
-              >
-                {loading ? "Generando escrito…" : "Generar escrito con IA"}
-              </button>
+              {!preparacion ? (
+                <button
+                  type="button"
+                  onClick={() => void prepararEscrito()}
+                  disabled={preparando}
+                  className="w-full sm:w-auto px-6 py-3 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-hover disabled:opacity-50"
+                >
+                  {preparando ? "Leyendo documento…" : "Analizar y preparar escrito"}
+                </button>
+              ) : (
+                <ConfirmacionEscritoForm
+                  preparacion={preparacion}
+                  respuestas={respuestas}
+                  onChange={setRespuestas}
+                  loading={loading}
+                  onConfirm={() => void generarEscrito()}
+                  onCancel={() => {
+                    setPreparacion(null);
+                    setError(null);
+                  }}
+                />
+              )}
             </>
           )}
         </div>

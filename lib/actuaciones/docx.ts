@@ -1,65 +1,59 @@
 import {
   Document,
-  Paragraph,
-  TextRun,
   Packer,
-  HeadingLevel,
-  AlignmentType,
+  Paragraph,
+  SectionType,
 } from "docx";
 import type { DocumentoPlantilla } from "@/lib/jurisdicciones/types";
+import {
+  buildMembreteParagraphs,
+  buildTitleParagraph,
+  linesToBodyParagraphs,
+  plainBodyParagraph,
+  DOCX_PAGE_MARGINS,
+  type MembreteDocumento,
+} from "@/lib/documents/docx-styles";
 import { ActuacionError } from "./types";
 
 function splitLines(text: string): string[] {
   return text.split("\n").filter((l) => l.length > 0);
 }
 
-function linesToParagraphs(lines: string[], bold = false): Paragraph[] {
-  return lines.map(
-    (line) =>
-      new Paragraph({
-        alignment: AlignmentType.JUSTIFIED,
-        children: [
-          new TextRun({
-            text: line,
-            bold,
-            size: 24,
-            font: "Times New Roman",
-          }),
-        ],
-        spacing: { after: 120 },
-      })
-  );
-}
-
-/** Convierte un DocumentoPlantilla a buffer DOCX. */
-export async function documentoToDocx(doc: DocumentoPlantilla): Promise<Uint8Array> {
+/** Convierte un DocumentoPlantilla a buffer DOCX con membrete y formato profesional. */
+export async function documentoToDocx(
+  doc: DocumentoPlantilla,
+  membrete?: MembreteDocumento
+): Promise<Uint8Array> {
   try {
     const children: Paragraph[] = [];
 
-    children.push(
-      new Paragraph({
-        text: doc.titulo,
-        heading: HeadingLevel.HEADING_1,
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 240 },
-      })
-    );
-
-    if (doc.encabezado) {
-      children.push(...linesToParagraphs(splitLines(doc.encabezado)));
+    if (membrete) {
+      children.push(...buildMembreteParagraphs(membrete));
     }
 
-    children.push(...linesToParagraphs(splitLines(doc.cuerpo)));
+    children.push(buildTitleParagraph(doc.titulo));
+
+    if (doc.encabezado) {
+      children.push(...linesToBodyParagraphs(splitLines(doc.encabezado)));
+      children.push(plainBodyParagraph(""));
+    }
+
+    children.push(...linesToBodyParagraphs(splitLines(doc.cuerpo)));
 
     if (doc.pie) {
-      children.push(
-        new Paragraph({ spacing: { before: 360 } }),
-        ...linesToParagraphs(splitLines(doc.pie))
-      );
+      children.push(new Paragraph({ spacing: { before: 360 } }));
+      children.push(...linesToBodyParagraphs(splitLines(doc.pie)));
     }
 
     const document = new Document({
-      sections: [{ properties: {}, children }],
+      sections: [
+        {
+          properties: {
+            page: { margin: DOCX_PAGE_MARGINS },
+          },
+          children,
+        },
+      ],
     });
 
     return await Packer.toBuffer(document);

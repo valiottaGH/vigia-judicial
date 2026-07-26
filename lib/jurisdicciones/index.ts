@@ -7,6 +7,7 @@ import { santaFeTemplate } from "./plantillas/santa-fe";
 
 const REGISTRY: Record<string, JurisdictionTemplate> = {
   default: defaultTemplate,
+  caba: buenosAiresTemplate,
   "buenos-aires": buenosAiresTemplate,
   "santa-fe": santaFeTemplate,
   cordoba: cordobaTemplate,
@@ -22,10 +23,11 @@ export function normalizeJurisdiccionKey(jurisdiccion: string): string {
     .trim();
 
   if (n.includes("santa fe")) return "santa-fe";
+  if (n.includes("caba") || n.includes("capital federal") || n.includes("justicia nacional"))
+    return "caba";
   if (n.includes("buenos aires") || n === "pba") return "buenos-aires";
   if (n.includes("cordoba")) return "cordoba";
   if (n.includes("mendoza")) return "mendoza";
-  if (n.includes("caba") || n.includes("capital federal")) return "buenos-aires";
 
   return "default";
 }

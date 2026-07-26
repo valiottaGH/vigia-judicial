@@ -13,6 +13,11 @@ export interface MembreteProfile {
   full_name: string | null;
   estudio_nombre: string | null;
   matricula: string | null;
+  matricula_tomo: string | null;
+  matricula_folio: string | null;
+  cuit_cuil: string | null;
+  caracter: string | null;
+  domicilio_electronico: string | null;
   domicilio_profesional: string | null;
   telefono: string | null;
   ciudad: string | null;
@@ -22,6 +27,11 @@ export interface ActualizarMembreteRequest {
   full_name?: string;
   estudio_nombre?: string;
   matricula?: string;
+  matricula_tomo?: string;
+  matricula_folio?: string;
+  cuit_cuil?: string;
+  caracter?: "propio" | "apoderado" | "patrocinante" | "";
+  domicilio_electronico?: string;
   domicilio_profesional?: string;
   telefono?: string;
   ciudad?: string;

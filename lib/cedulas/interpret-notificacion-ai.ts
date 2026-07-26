@@ -6,6 +6,7 @@ import {
   labelDocumentoSolicitado,
   type DocumentoSolicitado,
 } from "./documento-solicitado";
+import { formatRespuestasParaPrompt } from "./preparar-notificacion-ai";
 
 export class DocumentoNoAptoError extends Error {
   readonly code = "DOCUMENTO_NO_APTO" as const;
@@ -34,7 +35,7 @@ function buildSystemPrompt(): string {
     "Tipos de trámite frecuentes: peritos, notificar_partes, liquidacion, traslado, vista_causa, otras.",
     "tipo_documento puede ser: cedula (notificar resolución a partes), oficio, mandamiento, notificacion_electronica, carta_documento (intimación extrajudicial fehaciente vinculada al caso).",
     "texto_proveido: extracto fiel de lo ordenado por el tribunal.",
-    "texto_respuesta: redacción formal lista para insertar en la cédula/carta (cumplimiento, solicitud, intimación, etc.).",
+    "texto_respuesta: redacción formal, impecable y lista para presentar ante el tribunal (párrafos completos, tono profesional, sin placeholders).",
     "partes: personas u organismos a notificar con rol actor|demandado|tercero|organismo.",
     "motivo_rechazo: explicación clara y breve en español para el abogado cuando apto=false.",
   ].join("\n");
@@ -45,15 +46,28 @@ function buildUserPrompt(input: {
   caratula: string;
   documentoTexto: string;
   documentoSolicitado: DocumentoSolicitado;
+  contextoAnalisis?: string;
+  respuestasUsuario?: Record<string, string>;
+  datosPreparados?: import("./preparar-escrito").DatosExtraidosEscrito;
 }): string {
   const docLabel = labelDocumentoSolicitado(input.documentoSolicitado);
+  const contexto = input.contextoAnalisis
+    ? `\n\n${input.contextoAnalisis}\n`
+    : "";
+  const respuestas = input.respuestasUsuario
+    ? `\n\n${formatRespuestasParaPrompt(input.respuestasUsuario)}\n`
+    : "";
+  const preparados = input.datosPreparados
+    ? `\n\nDatos ya extraídos del documento (usá estos valores salvo corrección):\n${JSON.stringify(input.datosPreparados, null, 2)}\n`
+    : "";
+
   return `Expediente Nº ${input.numeroExpediente}
 Carátula: ${input.caratula}
 
 DOCUMENTO SOLICITADO POR EL LETRADO: ${docLabel.toUpperCase()}
 ${instruccionDocumentoSolicitado(input.documentoSolicitado)}
 Excepción: si el proveído ordena expresamente una LIQUIDACIÓN DE HONORARIOS, usá tipo_tramite=liquidacion y tipo_documento=liquidacion_honorarios aunque el letrado haya elegido otro tipo.
-
+${contexto}${preparados}${respuestas}
 Texto del proveído / notificación judicial:
 ---
 ${input.documentoTexto}
@@ -118,11 +132,15 @@ function parseParte(raw: Record<string, unknown>): ParteInterpretada | null {
   };
 }
 
-function isApto(raw: Record<string, unknown>): boolean {
+export function isAptoFromRaw(raw: Record<string, unknown>): boolean {
   const value = raw.apto;
   if (value === false || value === "false") return false;
   if (value === true || value === "true") return true;
   return true;
+}
+
+function isApto(raw: Record<string, unknown>): boolean {
+  return isAptoFromRaw(raw);
 }
 
 function assertDocumentoApto(raw: Record<string, unknown>): void {
@@ -229,6 +247,9 @@ export async function interpretarNotificacion(input: {
   caratula: string;
   documentoTexto: string;
   documentoSolicitado?: DocumentoSolicitado;
+  contextoAnalisis?: string;
+  respuestasUsuario?: Record<string, string>;
+  datosPreparados?: import("./preparar-escrito").DatosExtraidosEscrito;
 }): Promise<InterpretacionNotificacion> {
   if (!input.documentoTexto.trim()) {
     throw new Error("No se pudo leer texto del documento cargado.");

@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseRouteClient } from "@/lib/supabase/route-handler";
 import { parseDocumentoSolicitado } from "@/lib/cedulas/documento-solicitado";
 import { generarEscritoDesdeAnalisis } from "@/lib/analisis/generar-escrito";
+import { documentoDesdeRespuestas } from "@/lib/cedulas/preparar-notificacion-ai";
 import type { DocumentoAnalisis } from "@/lib/analisis/types";
 import { isAiConfigured, aiConfigErrorMessage } from "@/lib/ai/config";
 import { isMembreteCompleto, MEMBRETE_REQUIRED_MESSAGE } from "@/lib/profile/membrete";
+import { PERFIL_ESCRITO_SELECT } from "@/lib/profile/perfil-escrito";
 import type { MembreteProfile } from "@/types";
 import {
   getUserAiQuota,
@@ -27,6 +29,8 @@ type RouteContext = { params: Promise<{ id: string }> };
 interface GenerarEscritoBody {
   adjuntoId?: string;
   tipo_documento?: string;
+  respuestas?: Record<string, string>;
+  datos_preparados?: import("@/lib/cedulas/preparar-escrito").DatosExtraidosEscrito;
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {
@@ -99,14 +103,17 @@ export async function POST(request: NextRequest, context: RouteContext) {
     );
   }
 
-  const documentoSolicitado = parseDocumentoSolicitado(
-    body.tipo_documento ?? fila?.tramite?.tipo_documento_sugerido ?? "cedula"
+  const documentoSolicitado = documentoDesdeRespuestas(
+    body.respuestas,
+    parseDocumentoSolicitado(
+      body.tipo_documento ?? fila?.tramite?.tipo_documento_sugerido ?? "cedula"
+    )
   );
 
   const { data: profileData } = await supabase
     .from("profiles")
     .select(
-      "full_name, estudio_nombre, matricula, domicilio_profesional, telefono, ciudad, plan, subscription_status, is_admin"
+      `${PERFIL_ESCRITO_SELECT}, plan, subscription_status, is_admin`
     )
     .eq("id", user.id)
     .maybeSingle();
@@ -157,6 +164,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
       documentoSolicitado,
       profile: profileData as MembreteProfile,
       planAtGeneration: aiQuota.effectivePlan,
+      respuestasUsuario: body.respuestas,
+      datosPreparados: body.datos_preparados,
     });
 
     void logSecurityEvent({

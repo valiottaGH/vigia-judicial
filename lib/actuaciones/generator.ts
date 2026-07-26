@@ -41,6 +41,9 @@ export interface MembreteAbogado {
   full_name: string | null;
   matricula: string | null;
   ciudad: string | null;
+  estudio_nombre?: string | null;
+  domicilio_profesional?: string | null;
+  telefono?: string | null;
 }
 
 const STORAGE_BUCKET = "actuaciones";
@@ -91,15 +94,27 @@ function parteNombre(p: ParteExpediente): string {
   return `${p.apellido} ${p.nombre}`.trim();
 }
 
+function membreteFromAbogado(abogado: MembreteAbogado) {
+  return {
+    estudio: abogado.estudio_nombre ?? abogado.full_name ?? "Estudio Jurídico",
+    abogado: abogado.full_name ?? "",
+    matricula: abogado.matricula ?? "",
+    domicilio: abogado.domicilio_profesional ?? "",
+    telefono: abogado.telefono ?? "",
+    ciudad: abogado.ciudad ?? "",
+  };
+}
+
 async function generarDocumentoIndividual(
   tipo: TipoActuacion,
   template: ReturnType<typeof getJurisdictionTemplate>,
   variables: PlantillaVariables,
   index: number,
-  parte: ParteExpediente
+  parte: ParteExpediente,
+  abogado: MembreteAbogado
 ): Promise<DocumentoGenerado> {
   const doc = renderDocumento(tipo, template, variables);
-  const docx = await documentoToDocx(doc);
+  const docx = await documentoToDocx(doc, membreteFromAbogado(abogado));
 
   const tipoLabel =
     tipo === "cedula"
@@ -216,7 +231,8 @@ export async function generarPaqueteJudicial(
       template,
       variables,
       i + 1,
-      parte
+      parte,
+      abogado
     );
     documentos.push(doc);
   }

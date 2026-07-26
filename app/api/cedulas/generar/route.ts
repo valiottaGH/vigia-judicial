@@ -19,11 +19,14 @@ import {
   DocumentoNoAptoError,
   interpretarNotificacion,
 } from "@/lib/cedulas/interpret-notificacion-ai";
+import { documentoDesdeRespuestas } from "@/lib/cedulas/preparar-notificacion-ai";
 import { parseDocumentoSolicitado } from "@/lib/cedulas/documento-solicitado";
 import { isAiConfigured, aiConfigErrorMessage } from "@/lib/ai/config";
 import type { GenerarCedulaResponse } from "@/lib/cedulas/types";
-import { extractTextFromBuffer } from "@/lib/expedientes/extract-text";
+import { extraerTextoDocumentoParaIA } from "@/lib/expedientes/preparar-documento-ia";
+import { jurisdiccionLabelDesdeKey } from "@/lib/jurisdicciones/options";
 import type { ExpedienteActuaciones } from "@/lib/actuaciones/types";
+import { PERFIL_ESCRITO_SELECT } from "@/lib/profile/perfil-escrito";
 import type { MembreteProfile } from "@/types";
 import { isMembreteCompleto, MEMBRETE_REQUIRED_MESSAGE } from "@/lib/profile/membrete";
 import {
@@ -52,6 +55,8 @@ interface GenerarCedulaBody {
   fileName?: string;
   fileSize?: number;
   mimeType?: string;
+  respuestas?: Record<string, string>;
+  datos_preparados?: import("@/lib/cedulas/preparar-escrito").DatosExtraidosEscrito;
 }
 
 export async function GET() {
@@ -108,7 +113,7 @@ async function handleGenerarCedula(request: NextRequest) {
   const { data: profileData } = await supabase
     .from("profiles")
     .select(
-      "full_name, estudio_nombre, matricula, domicilio_profesional, telefono, ciudad, plan, subscription_status, is_admin"
+      `${PERFIL_ESCRITO_SELECT}, plan, subscription_status, is_admin`
     )
     .eq("id", user.id)
     .maybeSingle();
@@ -176,8 +181,9 @@ async function handleGenerarCedula(request: NextRequest) {
 
   const numero = String(body.numero ?? "").trim();
   const caratula = String(body.caratula ?? "").trim();
-  const documentoSolicitado = parseDocumentoSolicitado(
-    String(body.tipo_documento ?? "")
+  const documentoSolicitado = documentoDesdeRespuestas(
+    body.respuestas,
+    parseDocumentoSolicitado(String(body.tipo_documento ?? ""))
   );
   const expedienteId = String(body.expedienteId ?? "").trim();
   const adjuntoId = String(body.adjuntoId ?? "").trim();
@@ -240,6 +246,17 @@ async function handleGenerarCedula(request: NextRequest) {
 
   let expediente = { ...expedienteRow, caratula } as ExpedienteActuaciones;
 
+  const jurisdiccionElegida = jurisdiccionLabelDesdeKey(
+    body.respuestas?.jurisdiccion_plantilla
+  );
+  if (jurisdiccionElegida) {
+    await supabase
+      .from("expedientes")
+      .update({ jurisdiccion: jurisdiccionElegida } as never)
+      .eq("id", expedienteId);
+    expediente = { ...expediente, jurisdiccion: jurisdiccionElegida };
+  }
+
   let bytes: Uint8Array;
   try {
     bytes = await downloadAdjuntoFromStorage(storagePath);
@@ -279,7 +296,8 @@ async function handleGenerarCedula(request: NextRequest) {
 
   let documentoTexto: string;
   try {
-    documentoTexto = await extractTextFromBuffer(bytes, fileMime);
+    const extraido = await extraerTextoDocumentoParaIA(bytes, fileMime);
+    documentoTexto = extraido.texto;
   } catch (err) {
     return json(
       {
@@ -299,6 +317,8 @@ async function handleGenerarCedula(request: NextRequest) {
       caratula,
       documentoTexto,
       documentoSolicitado,
+      respuestasUsuario: body.respuestas,
+      datosPreparados: body.datos_preparados,
     });
   } catch (err) {
     if (err instanceof DocumentoNoAptoError) {
@@ -347,7 +367,7 @@ async function handleGenerarCedula(request: NextRequest) {
     expediente = { ...expediente, juzgado: interpretacion.juzgado };
   }
 
-  if (interpretacion.jurisdiccion) {
+  if (interpretacion.jurisdiccion && !jurisdiccionElegida) {
     await supabase
       .from("expedientes")
       .update({ jurisdiccion: interpretacion.jurisdiccion } as never)
