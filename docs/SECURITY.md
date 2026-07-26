@@ -6,7 +6,7 @@ Este documento describe las medidas de seguridad implementadas y la configuraci�
 
 - **Proveedor:** [Supabase Auth](https://supabase.com/docs/guides/auth) (no auth custom).
 - **Contraseñas:** hasheadas por Supabase (bcrypt); nunca almacenamos contraseñas en texto plano.
-- **Sesión:** cookies `httpOnly`, `Secure` en producción, `SameSite=Strict` en producción.
+- **Sesión:** cookies `httpOnly`, `Secure` en producción, `SameSite=Lax` (necesario para OAuth con Google).
 - **Expiración:** 8 h máximo absoluto + 2 h de inactividad en el cliente (`SessionGuard`).
 - **Verificación de email:** obligatoria para generar documentos con IA, descargar actuaciones y pagar (`EMAIL_NOT_VERIFIED`).
 - **2FA (MFA):** habilitable desde el dashboard de Supabase → Authentication → MFA. Recomendado para abogados que suben documentos sensibles.

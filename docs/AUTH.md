@@ -24,13 +24,13 @@
 
 **Authentication → URL Configuration**
 
-- **Site URL**: tu dominio de produccion (ej. `https://fast-cedu.vercel.app`)
+- **Site URL**: tu dominio de produccion (ej. `https://vigia-judicial.vercel.app`)
 - **Redirect URLs** — agregar **todas** las URLs de callback (obligatorio para Google y email):
 
 ```
 http://localhost:3000/auth/callback
 http://127.0.0.1:3000/auth/callback
-https://tu-app.vercel.app/auth/callback
+https://vigia-judicial.vercel.app/auth/callback
 ```
 
 Si falta `localhost`, Google te redirige a la Site URL (Vercel) aunque desarrolles en local.

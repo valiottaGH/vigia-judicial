@@ -8,7 +8,8 @@ export function applySessionCookieOptions(
   return {
     ...options,
     maxAge: SESSION_COOKIE_MAX_AGE_SECONDS,
-    sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+    // Lax es necesario para OAuth (Google): el cookie PKCE debe enviarse al volver desde Supabase.
+    sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     httpOnly: options.httpOnly ?? true,
     path: "/",

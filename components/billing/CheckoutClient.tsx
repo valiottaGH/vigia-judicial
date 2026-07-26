@@ -57,6 +57,22 @@ export default function CheckoutClient({ planId, publicKey }: CheckoutClientProp
         if (cancelled) return;
 
         if (!res.ok) {
+          if (data.code === "MP_NOT_CONFIGURED") {
+            setError(
+              "Mercado Pago no esta configurado en el servidor. Verifica MERCADOPAGO_ACCESS_TOKEN y NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY en Vercel y redeploy."
+            );
+            return;
+          }
+          if (data.code === "EMAIL_NOT_VERIFIED") {
+            setError(
+              "Confirma tu email antes de pagar. Revisa tu bandeja de entrada o inicia sesion con Google."
+            );
+            return;
+          }
+          if (res.status === 401) {
+            setError("Tu sesion expiro. Inicia sesion de nuevo e intenta el pago.");
+            return;
+          }
           setError(data.error ?? "No se pudo iniciar el checkout");
           return;
         }
