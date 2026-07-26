@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
+import DisclaimerGenerador from "@/components/cedulas/DisclaimerGenerador";
 import { preguntasParaConfirmacion } from "@/lib/cedulas/preguntas-escrito";
 import type {
   PreparacionEscrito,
@@ -300,6 +301,8 @@ export default function ConfirmacionEscritoForm({
           </p>
         )}
       </section>
+
+      <DisclaimerGenerador className="mb-2" />
 
       <div className="flex flex-wrap gap-3 pt-2">
         <button

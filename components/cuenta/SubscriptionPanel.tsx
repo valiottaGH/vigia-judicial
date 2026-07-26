@@ -28,6 +28,7 @@ export default function SubscriptionPanel({
 }) {
   const router = useRouter();
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [pendingPlanChange, setPendingPlanChange] = useState<PlanId | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -67,13 +68,22 @@ export default function SubscriptionPanel({
 
   async function selectPlan(targetPlan: PlanId) {
     if (targetPlan === plan && paidActive) return;
+    setPendingPlanChange(targetPlan);
+  }
 
-    if (targetPlan === "free") {
-      await changePlan("free");
+  async function confirmPlanChange() {
+    if (!pendingPlanChange) return;
+
+    const targetPlan = pendingPlanChange;
+
+    if (targetPlan !== "free") {
+      setPendingPlanChange(null);
+      router.push(`/dashboard/cuenta/checkout?plan=${targetPlan}`);
       return;
     }
 
-    router.push(`/dashboard/cuenta/checkout?plan=${targetPlan}`);
+    await changePlan("free");
+    setPendingPlanChange(null);
   }
 
   async function changePlan(targetPlan: PlanId) {
@@ -113,6 +123,8 @@ export default function SubscriptionPanel({
         : paymentNotice === "failure"
           ? "El pago no se completo. Podes intentar de nuevo."
           : null;
+
+  const pendingPlan = pendingPlanChange ? getPlan(pendingPlanChange) : null;
 
   return (
     <div className="space-y-6">
@@ -226,6 +238,73 @@ export default function SubscriptionPanel({
         </div>
       )}
 
+      {pendingPlan && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="plan-change-title"
+        >
+          <div className="w-full max-w-md bg-card border border-border rounded-xl p-6 shadow-lg space-y-4">
+            <h3 id="plan-change-title" className="text-lg font-semibold text-gray-900">
+              Cambiar de plan
+            </h3>
+            <p className="text-sm text-muted">
+              {pendingPlanChange === "free" ? (
+                <>
+                  ¿Seguro que querés cambiar al plan{" "}
+                  <span className="font-semibold text-gray-900">{pendingPlan.nombre}</span>?
+                  Vas a dejar de tener los beneficios de tu plan{" "}
+                  <span className="font-semibold text-gray-900">{current.nombre}</span> (
+                  {current.features[0]}).
+                </>
+              ) : (
+                <>
+                  ¿Seguro que querés cambiar al plan{" "}
+                  <span className="font-semibold text-gray-900">{pendingPlan.nombre}</span>?
+                  {plan !== "free" && paidActive ? (
+                    <>
+                      {" "}
+                      Reemplazarás tu plan{" "}
+                      <span className="font-semibold text-gray-900">{current.nombre}</span> y
+                      serás redirigido al checkout para completar el pago.
+                    </>
+                  ) : (
+                    <> Serás redirigido al checkout para completar el pago.</>
+                  )}
+                </>
+              )}
+            </p>
+            <div className="flex flex-wrap gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setPendingPlanChange(null)}
+                disabled={loading}
+                className="px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-background disabled:opacity-50"
+              >
+                No, mantener plan actual
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmPlanChange()}
+                disabled={loading}
+                className={`px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50 ${
+                  pendingPlanChange === "free"
+                    ? "bg-danger hover:bg-red-700"
+                    : "bg-primary hover:bg-primary-hover"
+                }`}
+              >
+                {loading
+                  ? "Procesando…"
+                  : pendingPlanChange === "free"
+                    ? `Sí, cambiar a ${pendingPlan.nombre}`
+                    : `Sí, continuar con ${pendingPlan.nombre}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <PlanGrid
         currentPlan={plan}
         paidActive={paidActive}
@@ -291,7 +370,7 @@ function PlanGrid({
                 disabled={loading}
                 className="mt-4 w-full px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-background disabled:opacity-50"
               >
-                Elegir Gratis
+                {currentPlan === "free" ? "Elegir Gratis" : "Cambiar a Gratis"}
               </button>
             ) : (
               <button
@@ -304,7 +383,11 @@ function PlanGrid({
                     : "border border-primary text-primary hover:bg-primary/5"
                 }`}
               >
-                {loading ? "Redirigiendo…" : `Pagar ${p.nombre}`}
+                {loading
+                  ? "Procesando…"
+                  : currentPlan === "free"
+                    ? `Pagar ${p.nombre}`
+                    : `Cambiar a ${p.nombre}`}
               </button>
             )}
           </div>

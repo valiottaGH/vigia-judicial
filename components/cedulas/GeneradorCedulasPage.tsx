@@ -6,6 +6,7 @@ import DocumentoGeneradoModal from "@/components/cedulas/DocumentoGeneradoModal"
 import ConfirmacionEscritoForm, {
   respuestasIniciales,
 } from "@/components/cedulas/ConfirmacionEscritoForm";
+import DisclaimerGenerador from "@/components/cedulas/DisclaimerGenerador";
 import FilePickerField from "@/components/files/FilePickerField";
 import FileUploadToast from "@/components/files/FileUploadToast";
 import {
@@ -323,9 +324,9 @@ export default function GeneradorCedulasPage({
         </h1>
         <p className="text-sm text-muted mt-2 leading-relaxed">
           Cargá el proveído o notificación del juzgado. La IA lo lee primero,
-          te pide solo lo indispensable y genera un borrador impecable listo
-          para presentar.
+          te pide solo lo indispensable y genera un borrador listo para revisar.
         </p>
+        <DisclaimerGenerador variant="compact" className="mt-3" />
       </div>
 
       {!aiDisponible && (

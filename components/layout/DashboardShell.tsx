@@ -5,16 +5,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import AppLogo from "@/components/layout/AppLogo";
 import MembreteAlertBanner from "@/components/profile/MembreteAlertBanner";
+import AtencionClienteWidget from "@/components/support/AtencionClienteWidget";
 import { createClient } from "@/lib/supabase/client";
 
 const USER_LINKS = [
   { href: "/dashboard/configuracion", label: "Configuración" },
   { href: "/dashboard/cuenta?tab=perfil", label: "Mi cuenta" },
-];
-
-const MODULE_LINKS = [
-  { href: "/dashboard/analisis", label: "Análisis IA" },
-  { href: "/dashboard/generar", label: "Generar escrito" },
 ];
 
 const ADMIN_LINK = { href: "/dashboard/admin", label: "Administración" };
@@ -39,9 +35,7 @@ export default function DashboardShell({
 
   const initials = userEmail.slice(0, 2).toUpperCase();
   const isHome =
-    pathname === "/dashboard" ||
-    pathname.startsWith("/dashboard/analisis") ||
-    pathname.startsWith("/dashboard/generar");
+    pathname === "/dashboard" || pathname.startsWith("/dashboard/analisis");
 
   async function logout() {
     const supabase = createClient();
@@ -148,36 +142,14 @@ export default function DashboardShell({
         </div>
       </header>
 
-      <nav className="border-b border-border bg-card/80">
-        <div className="max-w-4xl mx-auto w-full px-3 md:px-6 flex gap-1 overflow-x-auto">
-          {MODULE_LINKS.map((item) => {
-            const active =
-              item.href === "/dashboard/analisis"
-                ? pathname.startsWith("/dashboard/analisis")
-                : pathname.startsWith("/dashboard/generar");
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                  active
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted hover:text-primary"
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
-
       <main className="flex-1 p-4 md:p-8">
         <div className="max-w-4xl mx-auto w-full space-y-4">
           {!membreteCompleto && <MembreteAlertBanner />}
           {children}
         </div>
       </main>
+
+      <AtencionClienteWidget />
     </div>
   );
 }
