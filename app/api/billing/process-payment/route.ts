@@ -3,7 +3,11 @@ import { Payment } from "mercadopago";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { getMercadoPagoClient } from "@/lib/mercadopago/client";
-import { isMercadoPagoConfigured, formatMercadoPagoError } from "@/lib/mercadopago/config";
+import { isMercadoPagoConfigured } from "@/lib/mercadopago/config";
+import {
+  formatMercadoPagoPaymentError,
+  getMercadoPagoRejectionMessage,
+} from "@/lib/mercadopago/payment-messages";
 import {
   fulfillMercadoPagoPayment,
   mapMercadoPagoStatus,
@@ -122,7 +126,7 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error("[billing/process-payment]", err);
     return NextResponse.json(
-      { error: formatMercadoPagoError(err) },
+      { error: formatMercadoPagoPaymentError(err) },
       { status: 402 }
     );
   }
@@ -177,9 +181,8 @@ export async function POST(request: Request) {
   return NextResponse.json(
     {
       status: mapped,
-      error:
-        payment.status_detail ??
-        "El pago no pudo completarse. Proba con otro medio de pago.",
+      error: getMercadoPagoRejectionMessage(payment.status_detail),
+      code: payment.status_detail ?? undefined,
       paymentId: payment.id,
     },
     { status: 402 }
