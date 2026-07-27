@@ -20,8 +20,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const redirectTarget = new URL(next, origin);
-  let response = NextResponse.redirect(redirectTarget);
+  const redirectTarget = new URL(
+    `/auth/confirm?next=${encodeURIComponent(next)}`,
+    origin
+  );
+  let response = NextResponse.redirect(redirectTarget, 303);
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -52,6 +55,9 @@ export async function GET(request: NextRequest) {
     loginUrl.searchParams.set("error", "auth");
     return NextResponse.redirect(loginUrl);
   }
+
+  // Refresca la sesión en cookies antes del redirect intermedio.
+  await supabase.auth.getUser();
 
   response.cookies.set(
     SESSION_STARTED_COOKIE,

@@ -75,6 +75,7 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isLoginRoute = pathname === "/login" || pathname.startsWith("/login/");
   const isAuthCallback = pathname.startsWith("/auth/callback");
+  const isAuthConfirm = pathname.startsWith("/auth/confirm");
   const isProtectedRoute =
     request.nextUrl.pathname.startsWith("/dashboard") ||
     request.nextUrl.pathname.startsWith("/onboarding") ||
@@ -106,7 +107,7 @@ export async function updateSession(request: NextRequest) {
     return applySecurityHeaders(NextResponse.redirect(url));
   }
 
-  if (user && isLoginRoute && !isAuthCallback) {
+  if (user && isLoginRoute && !isAuthCallback && !isAuthConfirm) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     url.search = "";

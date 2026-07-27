@@ -45,6 +45,21 @@ export default function LoginForm() {
     if (signupMode) setIsSignUp(true);
   }, [signupMode]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const client = createClient();
+
+    void client.auth.getSession().then(({ data: { session } }) => {
+      if (cancelled || !session) return;
+      router.replace(redirect.startsWith("/") ? redirect : "/dashboard");
+      router.refresh();
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [redirect, router]);
+
   function resetFormErrors() {
     setError(null);
     setMessage(null);
