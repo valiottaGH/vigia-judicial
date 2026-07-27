@@ -149,7 +149,7 @@ export default function DashboardShell({
         </div>
       </main>
 
-      <AtencionClienteWidget />
+      <AtencionClienteWidget userEmail={userEmail} />
     </div>
   );
 }

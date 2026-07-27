@@ -84,7 +84,8 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/api/actuaciones") ||
     request.nextUrl.pathname.startsWith("/api/profile") ||
     request.nextUrl.pathname.startsWith("/api/admin") ||
-    request.nextUrl.pathname.startsWith("/api/billing");
+    request.nextUrl.pathname.startsWith("/api/billing") ||
+    request.nextUrl.pathname.startsWith("/api/support");
 
   const requiresVerifiedEmail =
     request.nextUrl.pathname.startsWith("/api/cedulas") ||

@@ -8,18 +8,89 @@ const SUPPORT_EMAIL =
 
 const SUPPORT_IMAGE = "/atencion-cliente.png";
 
-export default function AtencionClienteWidget() {
+interface AtencionClienteWidgetProps {
+  userEmail: string;
+}
+
+export default function AtencionClienteWidget({
+  userEmail,
+}: AtencionClienteWidgetProps) {
   const [open, setOpen] = useState(false);
   const [mensaje, setMensaje] = useState("");
+  const [sending, setSending] = useState(false);
+  const [feedback, setFeedback] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  function contactar() {
-    const subject = encodeURIComponent("Fast Cedu — Reporte de error / consulta");
-    const body = encodeURIComponent(
-      mensaje.trim()
-        ? mensaje.trim()
-        : "Hola, necesito ayuda con:\n\n[Describí el error o tu consulta]"
-    );
-    window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
+  function resetModal() {
+    setOpen(false);
+    setMensaje("");
+    setFeedback(null);
+    setCopied(false);
+  }
+
+  async function copyEmail() {
+    try {
+      await navigator.clipboard.writeText(SUPPORT_EMAIL);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setFeedback({
+        type: "error",
+        text: `No pudimos copiar el email. Escribilo manualmente: ${SUPPORT_EMAIL}`,
+      });
+    }
+  }
+
+  async function enviarConsulta() {
+    const trimmed = mensaje.trim();
+    if (trimmed.length < 10) {
+      setFeedback({
+        type: "error",
+        text: "Contanos un poco más sobre el error o la consulta (mínimo 10 caracteres).",
+      });
+      return;
+    }
+
+    setSending(true);
+    setFeedback(null);
+
+    try {
+      const res = await fetch("/api/support", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: trimmed,
+          pageUrl: window.location.pathname + window.location.search,
+        }),
+      });
+
+      const data = (await res.json()) as { message?: string; error?: string };
+
+      if (!res.ok) {
+        setFeedback({
+          type: "error",
+          text: data.error ?? "No se pudo enviar la consulta.",
+        });
+        return;
+      }
+
+      setFeedback({
+        type: "success",
+        text: data.message ?? "Recibimos tu consulta. Te responderemos pronto.",
+      });
+      setMensaje("");
+    } catch {
+      setFeedback({
+        type: "error",
+        text: "Error de conexión. Verificá tu internet e intentá de nuevo.",
+      });
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -28,7 +99,10 @@ export default function AtencionClienteWidget() {
         <div className="group relative">
           <button
             type="button"
-            onClick={() => setOpen(true)}
+            onClick={() => {
+              setOpen(true);
+              setFeedback(null);
+            }}
             className="w-12 h-12 rounded-full overflow-hidden border-2 border-primary/30 bg-white shadow-lg ring-2 ring-primary/10 hover:ring-primary/25 hover:scale-105 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary p-1.5"
             aria-label="Atención al cliente"
           >
@@ -55,7 +129,7 @@ export default function AtencionClienteWidget() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="atencion-title"
-          onClick={() => setOpen(false)}
+          onClick={resetModal}
         >
           <div
             className="w-full max-w-md bg-card border border-border rounded-xl p-5 shadow-xl space-y-4"
@@ -76,8 +150,9 @@ export default function AtencionClienteWidget() {
                   Atención al cliente
                 </h2>
                 <p className="text-sm text-muted mt-1">
-                  ¿Encontraste un error o necesitás ayuda? Contanos qué pasó y un
-                  operador te responderá a la brevedad.
+                  ¿Encontraste un error o necesitás ayuda? Contanos qué pasó y te
+                  respondemos a{" "}
+                  <span className="text-gray-900">{userEmail}</span>.
                 </p>
               </div>
             </div>
@@ -86,31 +161,59 @@ export default function AtencionClienteWidget() {
               value={mensaje}
               onChange={(e) => setMensaje(e.target.value)}
               rows={4}
+              disabled={sending}
               placeholder="Ej.: Error al generar escrito, pago no acreditado, duda sobre el análisis…"
-              className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+              className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none disabled:opacity-60"
             />
+
+            {feedback && (
+              <div
+                className={`p-3 rounded-lg text-sm ${
+                  feedback.type === "success"
+                    ? "bg-accent/25 border border-accent text-gray-900"
+                    : "bg-red-50 text-danger"
+                }`}
+              >
+                {feedback.text}
+              </div>
+            )}
 
             <div className="flex flex-wrap gap-2 justify-end">
               <button
                 type="button"
-                onClick={() => setOpen(false)}
-                className="px-4 py-2 border border-border rounded-lg text-sm hover:bg-background"
+                onClick={resetModal}
+                disabled={sending}
+                className="px-4 py-2 border border-border rounded-lg text-sm hover:bg-background disabled:opacity-60"
               >
                 Cerrar
               </button>
               <button
                 type="button"
-                onClick={contactar}
-                className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-hover"
+                onClick={() => void enviarConsulta()}
+                disabled={sending}
+                className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-hover disabled:opacity-60"
               >
-                Enviar consulta
+                {sending ? "Enviando…" : "Enviar consulta"}
               </button>
             </div>
 
-            <p className="text-xs text-muted">
-              Se abrirá tu cliente de correo hacia{" "}
-              <span className="text-gray-900">{SUPPORT_EMAIL}</span>.
-            </p>
+            <div className="rounded-lg border border-border bg-background px-3 py-2 space-y-2">
+              <p className="text-xs text-muted">
+                Si el envío falla, escribinos a:
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-gray-900 break-all">
+                  {SUPPORT_EMAIL}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void copyEmail()}
+                  className="text-xs px-2 py-1 rounded border border-border hover:bg-card"
+                >
+                  {copied ? "Copiado" : "Copiar email"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
