@@ -13,6 +13,7 @@
     "@react-pdf/renderer": "^4.5.1",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.8",
+    "@vercel/analytics": "^2.0.1",
     "cheerio": "^1.2.0",
     "docx": "^9.7.1",
     "jszip": "^3.10.1",
