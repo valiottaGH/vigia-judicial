@@ -15,7 +15,8 @@ Documentacion completa: **[docs/PROYECTO.md](docs/PROYECTO.md)**
 ## Inicio rapido
 
 ```powershell
-cd C:\Users\valen\Projects\vigia-judicial
+git clone https://github.com/valiottaGH/vigia-judicial.git
+cd vigia-judicial
 npm install
 copy .env.local.example .env.local
 npm run dev
@@ -65,4 +66,4 @@ powershell -ExecutionPolicy Bypass -File scripts\convert-to-utf8.ps1
 
 ## Licencia
 
-Privado — uso interno.
+Código abierto — revisá `docs/PUBLIC_REPO.md` antes de publicar secrets en issues o PRs.

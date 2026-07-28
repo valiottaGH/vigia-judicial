@@ -1,14 +1,19 @@
 #!/bin/bash
 set -e
-cd /c/Users/valen/Projects/vigia-judicial
+cd "$(dirname "$0")/.."
 
-echo "=== Recreando repo sin node_modules ==="
+echo "=== Recreando repo (solo archivos trackeables por .gitignore) ==="
 rm -rf .git
 git init
 git add .
 
-if git diff --cached --name-only | grep -q '^node_modules/'; then
-  echo "ERROR: node_modules sigue en el staging. Revisa .gitignore"
+if git diff --cached --name-only | grep -qE '^\.env\.local$|^\.env$|node_modules/'; then
+  echo "ERROR: archivos sensibles en staging. Revisa .gitignore"
+  exit 1
+fi
+
+if git diff --cached --name-only | grep -qE 'sk-or-v1-|eyJhbGci|APP_USR-[0-9a-f]{8}-'; then
+  echo "ERROR: posible secreto en archivos staged. Abortando."
   exit 1
 fi
 

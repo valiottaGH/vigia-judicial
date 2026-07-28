@@ -20,7 +20,6 @@
 
 # misc
 .DS_Store
-*.pem
 
 # debug
 npm-debug.log*
@@ -31,7 +30,24 @@ build-log.txt
 
 # env files
 .env
+.env.*
+!.env.local.example
 .env*.local
+
+# local secrets / keys (never commit)
+*.pem
+*.key
+*.p12
+*.pfx
+apkey.txt
+google.txt
+credentials.json
+secrets.json
+
+# local test scripts and fixtures (may load env secrets)
+scripts/test-*.ts
+scripts/test-*.mjs
+scripts/tmp-*
 
 # vercel
 .vercel
