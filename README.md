@@ -66,4 +66,4 @@ powershell -ExecutionPolicy Bypass -File scripts\convert-to-utf8.ps1
 
 ## Licencia
 
-Código abierto — revisá `docs/PUBLIC_REPO.md` antes de publicar secrets en issues o PRs.
+Código abierto —
