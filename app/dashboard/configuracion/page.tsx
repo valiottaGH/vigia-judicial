@@ -28,7 +28,9 @@ export default async function ConfiguracionPage() {
         initial={profile as MembreteProfile | null}
       />
       <hr className="border-border" />
-      <ConfigPlantillasCedulaForm />
+      <div id="plantillas-cedula">
+        <ConfigPlantillasCedulaForm />
+      </div>
     </div>
   );
 }
