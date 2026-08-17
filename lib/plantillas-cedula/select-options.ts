@@ -61,7 +61,7 @@ export function injectPlantillasUsuarioEnPreparacion(
         ? {
             ...p,
             pregunta:
-              "Modelo de cédula/oficio: provincial del sistema o tu plantilla DOCX",
+              "Modelo de cédula/oficio: provincial del sistema o tu modelo propio",
             motivo:
               "Podés usar un modelo provincial o una plantilla propia que hayas cargado en Configuración.",
             opciones,

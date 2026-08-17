@@ -33,7 +33,7 @@ export function buildPreguntaJurisdiccion(
     categoria: "logistica",
     label: "Jurisdicción del escrito",
     pregunta: opcionesExtra?.length
-      ? "Modelo de cédula/oficio: provincial del sistema o tu plantilla DOCX"
+      ? "Modelo de cédula/oficio: provincial del sistema o tu modelo propio"
       : "Modelo de cédula/oficio según provincia o CABA",
     valor_sugerido: sugerida,
     requerido: true,

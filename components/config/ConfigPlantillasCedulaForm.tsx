@@ -128,9 +128,8 @@ export default function ConfigPlantillasCedulaForm() {
           Mis modelos de cédula
         </h2>
         <p className="text-sm text-muted mt-1">
-          Subí una cédula que ya hayas usado (con datos reales de un caso).
-          La IA detecta automáticamente qué partes cambian en cada trámite — destinatario,
-          domicilio, expediente, proveído, firma, etc. — y reutiliza tu formato Word.
+          Subí una cédula que ya hayas usado en un caso real. La IA aprende tu
+          formato y lo reutiliza al generar nuevos escritos.
         </p>
       </div>
 
@@ -170,8 +169,7 @@ export default function ConfigPlantillasCedulaForm() {
             required
           />
           <p className="text-xs text-muted mt-1.5">
-            Usá una cédula ya completada de un caso anterior. No hace falta editarla
-            ni agregar variables.
+            Una cédula ya completada de un caso anterior, en Word (.docx).
           </p>
         </div>
         <button
