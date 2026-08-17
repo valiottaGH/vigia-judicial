@@ -253,7 +253,12 @@ async function handleGenerarCedula(request: NextRequest) {
   );
 
   let userPlantilla:
-    | { id: string; nombre: string; storagePath: string }
+    | {
+        id: string;
+        nombre: string;
+        storagePath: string;
+        analisisIa: import("@/lib/plantillas-cedula/types").AnalisisPlantillaCedula | null;
+      }
     | undefined;
 
   if (plantillaSeleccion?.type === "user") {
@@ -271,10 +276,20 @@ async function handleGenerarCedula(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (!plantilla.analisis_ia) {
+      return json(
+        {
+          error:
+            "Esta plantilla no fue analizada. Volvé a subirla desde Configuración.",
+        },
+        { status: 400 }
+      );
+    }
     userPlantilla = {
       id: plantilla.id,
       nombre: plantilla.nombre,
       storagePath: plantilla.storage_path,
+      analisisIa: plantilla.analisis_ia,
     };
   } else {
     const jurisdiccionElegida = jurisdiccionLabelDesdeKey(

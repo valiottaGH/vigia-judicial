@@ -43,6 +43,7 @@ export interface GeneradorInput {
     id: string;
     nombre: string;
     storagePath: string;
+    analisisIa?: import("@/lib/plantillas-cedula/types").AnalisisPlantillaCedula | null;
   };
 }
 
@@ -121,10 +122,11 @@ async function generarDocumentoIndividual(
   index: number,
   parte: ParteExpediente,
   abogado: MembreteAbogado,
-  userTemplateBuffer?: Uint8Array
+  userTemplateBuffer?: Uint8Array,
+  userPlantillaAnalisis?: import("@/lib/plantillas-cedula/types").AnalisisPlantillaCedula | null
 ): Promise<DocumentoGenerado> {
   const docx = userTemplateBuffer
-    ? mergePlantillaDocx(userTemplateBuffer, variables)
+    ? mergePlantillaDocx(userTemplateBuffer, variables, userPlantillaAnalisis)
     : await documentoToDocx(
         renderDocumento(tipo, template, variables),
         membreteFromAbogado(abogado)
@@ -257,7 +259,8 @@ export async function generarPaqueteJudicial(
       i + 1,
       parte,
       abogado,
-      userTemplateBuffer
+      userTemplateBuffer,
+      userPlantilla?.analisisIa
     );
     documentos.push(doc);
   }

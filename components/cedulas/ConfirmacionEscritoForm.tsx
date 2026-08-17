@@ -259,11 +259,11 @@ export default function ConfirmacionEscritoForm({
 
       {logisticas.some((p) => p.id === "jurisdiccion_plantilla") && (
         <p className="text-xs text-muted -mt-2">
-          ¿Querés usar tu propio modelo Word?{" "}
-          <Link href="/dashboard/configuracion" className="text-primary hover:underline">
-            Cargalo en Configuración
+          ¿Tenés tu propio modelo Word?{" "}
+          <Link href="/dashboard/configuracion#plantillas-cedula" className="text-primary hover:underline">
+            Subí una cédula de ejemplo
           </Link>{" "}
-          y aparecerá como &quot;Mi modelo: …&quot; en el selector de arriba.
+          en Configuración y elegila acá como &quot;Mi modelo: …&quot;.
         </p>
       )}
 

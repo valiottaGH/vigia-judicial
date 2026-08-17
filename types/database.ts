@@ -312,6 +312,7 @@ export interface Database {
           storage_path: string;
           mime_type: string;
           tamano_bytes: number;
+          analisis_ia: Json | null;
           created_at: string;
         };
         Insert: {
@@ -373,6 +374,7 @@ export interface Database {
           nombre_archivo: string;
           mime_type: string;
           tamano_bytes: number;
+          analisis_ia: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -385,6 +387,7 @@ export interface Database {
           nombre_archivo: string;
           mime_type?: string;
           tamano_bytes: number;
+          analisis_ia?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -397,6 +400,7 @@ export interface Database {
           nombre_archivo?: string;
           mime_type?: string;
           tamano_bytes?: number;
+          analisis_ia?: Json | null;
           created_at?: string;
           updated_at?: string;
         };

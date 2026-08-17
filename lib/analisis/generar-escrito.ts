@@ -86,7 +86,12 @@ export async function generarEscritoDesdeAnalisis(input: {
   );
 
   let userPlantilla:
-    | { id: string; nombre: string; storagePath: string }
+    | {
+        id: string;
+        nombre: string;
+        storagePath: string;
+        analisisIa: import("@/lib/plantillas-cedula/types").AnalisisPlantillaCedula | null;
+      }
     | undefined;
 
   if (plantillaSeleccion?.type === "user") {
@@ -100,10 +105,16 @@ export async function generarEscritoDesdeAnalisis(input: {
         "La plantilla seleccionada no existe. Volvé a elegir el modelo en el paso de confirmación."
       );
     }
+    if (!plantilla.analisis_ia) {
+      throw new Error(
+        "Esta plantilla no fue analizada. Volvé a subirla desde Configuración."
+      );
+    }
     userPlantilla = {
       id: plantilla.id,
       nombre: plantilla.nombre,
       storagePath: plantilla.storage_path,
+      analisisIa: plantilla.analisis_ia,
     };
   } else {
     const jurisdiccionElegida = jurisdiccionLabelDesdeKey(

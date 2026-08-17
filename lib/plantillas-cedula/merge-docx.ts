@@ -1,43 +1,29 @@
-import Docxtemplater from "docxtemplater";
-import PizZip from "pizzip";
 import type { PlantillaVariables } from "@/lib/jurisdicciones/types";
+import { mergePlantillaDocxPlaceholders } from "./merge-placeholders";
+import { reemplazarEnDocxEjemplo } from "./reemplazar-en-docx";
+import type { AnalisisPlantillaCedula } from "./types";
 import { PlantillaCedulaError } from "./storage";
 
-/** Completa una plantilla DOCX del usuario con las variables del expediente. */
+/** Completa una plantilla del usuario según su modo (ejemplo analizado por IA o placeholders). */
 export function mergePlantillaDocx(
   templateBuffer: Uint8Array,
-  variables: PlantillaVariables
+  variables: PlantillaVariables,
+  analisisIa?: AnalisisPlantillaCedula | null
 ): Uint8Array {
+  if (analisisIa?.modo === "ejemplo") {
+    return reemplazarEnDocxEjemplo(templateBuffer, analisisIa, variables);
+  }
+
+  if (analisisIa?.modo === "placeholders") {
+    return mergePlantillaDocxPlaceholders(templateBuffer, variables);
+  }
+
+  // Plantillas legacy sin análisis: intentar placeholders y luego ejemplo vacío
   try {
-    const zip = new PizZip(templateBuffer);
-    const doc = new Docxtemplater(zip, {
-      paragraphLoop: true,
-      linebreaks: true,
-    });
-
-    doc.render({
-      tribunal: variables.tribunal,
-      caratula: variables.caratula,
-      numero_expediente: variables.numero_expediente,
-      jurisdiccion: variables.jurisdiccion,
-      destinatario: variables.destinatario,
-      domicilio: variables.domicilio,
-      texto_resolucion: variables.texto_resolucion,
-      fecha: variables.fecha,
-      abogado: variables.abogado,
-      matricula: variables.matricula,
-      ciudad: variables.ciudad,
-      provincia: variables.provincia,
-    });
-
-    return doc.getZip().generate({ type: "uint8array" }) as Uint8Array;
-  } catch (err) {
-    const msg =
-      err instanceof Error
-        ? err.message
-        : "Error desconocido al completar la plantilla";
+    return mergePlantillaDocxPlaceholders(templateBuffer, variables);
+  } catch {
     throw new PlantillaCedulaError(
-      `No se pudo completar la plantilla DOCX: ${msg}`,
+      "Esta plantilla no fue analizada. Volvé a subirla como cédula de ejemplo.",
       "STORAGE"
     );
   }

@@ -202,6 +202,7 @@ export async function generarDocumentoDesdeInterpretacion(input: {
     id: string;
     nombre: string;
     storagePath: string;
+    analisisIa?: import("@/lib/plantillas-cedula/types").AnalisisPlantillaCedula | null;
   };
 }): Promise<{
   actuacion_id: string;

@@ -7,7 +7,7 @@ export const MAX_PLANTILLA_BYTES = 5 * 1024 * 1024;
 
 export const USER_PLANTILLA_PREFIX = "user:";
 
-/** Variables disponibles en plantillas DOCX del usuario (sintaxis docxtemplater: {variable}). */
+/** Variables internas (modo avanzado con llaves en el DOCX). */
 export const VARIABLES_PLANTILLA_DOCX = [
   { key: "tribunal", label: "Tribunal / juzgado" },
   { key: "caratula", label: "Carátula del expediente" },

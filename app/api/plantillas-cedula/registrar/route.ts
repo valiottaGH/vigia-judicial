@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseRouteClient } from "@/lib/supabase/route-handler";
+import { analizarCedulaEjemplo } from "@/lib/plantillas-cedula/analizar-ejemplo-ai";
+import { extraerTextoCedulaEjemplo } from "@/lib/plantillas-cedula/extract-text";
 import {
   assertPlantillaStoragePathOwnedByUser,
   downloadPlantillaFromStorage,
   validatePlantillaBuffer,
 } from "@/lib/plantillas-cedula/storage";
 import { PLANTILLA_DOCX_MIME } from "@/lib/plantillas-cedula/constants";
+import { isAiConfigured, aiConfigErrorMessage } from "@/lib/ai/config";
+import type { Json } from "@/types/database";
 
+export const maxDuration = 60;
 export const runtime = "nodejs";
 
 interface RegistrarBody {
@@ -27,6 +32,13 @@ export async function POST(request: NextRequest) {
   const user = await getUser();
   if (!user) {
     return json({ error: "No autorizado", code: "UNAUTHORIZED" }, { status: 401 });
+  }
+
+  if (!isAiConfigured()) {
+    return json(
+      { error: aiConfigErrorMessage(), code: "AI_NOT_CONFIGURED" },
+      { status: 503 }
+    );
   }
 
   let body: RegistrarBody;
@@ -97,6 +109,31 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  let analisisIa;
+  try {
+    const texto = await extraerTextoCedulaEjemplo(bytes);
+    if (texto.length < 80) {
+      return json(
+        {
+          error:
+            "El documento tiene muy poco texto. Subí una cédula ya completada con todos los datos.",
+        },
+        { status: 422 }
+      );
+    }
+    analisisIa = await analizarCedulaEjemplo(texto);
+  } catch (err) {
+    return json(
+      {
+        error:
+          err instanceof Error
+            ? err.message
+            : "No se pudo analizar la cédula de ejemplo",
+      },
+      { status: 422 }
+    );
+  }
+
   const { data, error } = await supabase
     .from("plantillas_cedula_usuario")
     .insert({
@@ -108,6 +145,7 @@ export async function POST(request: NextRequest) {
       nombre_archivo: fileName,
       mime_type: PLANTILLA_DOCX_MIME,
       tamano_bytes: fileSize,
+      analisis_ia: analisisIa as unknown as Json,
     } as never)
     .select("*")
     .single();
@@ -119,5 +157,5 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  return json({ plantilla: data }, { status: 201 });
+  return json({ plantilla: data, analisis: analisisIa }, { status: 201 });
 }
