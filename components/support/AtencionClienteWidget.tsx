@@ -68,9 +68,20 @@ export default function AtencionClienteWidget({
         }),
       });
 
-      const data = (await res.json()) as { message?: string; error?: string };
+      const data = (await res.json()) as {
+        message?: string;
+        error?: string;
+        code?: string;
+      };
 
       if (!res.ok) {
+        if (data.code === "SUPPORT_NOT_CONFIGURED") {
+          setFeedback({
+            type: "error",
+            text: `El envío automático no está activo. Escribinos a ${SUPPORT_EMAIL} y te respondemos.`,
+          });
+          return;
+        }
         setFeedback({
           type: "error",
           text: data.error ?? "No se pudo enviar la consulta.",
