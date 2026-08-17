@@ -61,16 +61,16 @@ export default function AnalisisListPage({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-end gap-3">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 w-full">
         <Link
           href="/dashboard/configuracion#plantillas-cedula"
-          className="px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-background"
+          className="inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-medium border-2 border-primary/70 text-primary bg-white hover:bg-primary/5 shrink-0 whitespace-nowrap"
         >
           Agregar modelo de cédula
         </Link>
         <Link
           href="/dashboard/analisis/nuevo"
-          className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-hover"
+          className="inline-flex items-center justify-center px-4 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-hover shrink-0 whitespace-nowrap"
         >
           + Nuevo análisis
         </Link>
