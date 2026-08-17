@@ -20,6 +20,8 @@ import {
   perfilParaEscrito,
   PERFIL_ESCRITO_SELECT,
 } from "@/lib/profile/perfil-escrito";
+import { listPlantillasCedulaUsuario } from "@/lib/plantillas-cedula/repository";
+import { injectPlantillasUsuarioEnPreparacion } from "@/lib/plantillas-cedula/select-options";
 import {
   checkRateLimit,
   rateLimitKey,
@@ -181,7 +183,14 @@ export async function POST(request: NextRequest) {
       lectura,
     });
 
-    return json({ preparacion });
+    const plantillasUsuario = await listPlantillasCedulaUsuario(supabase, user.id);
+
+    return json({
+      preparacion: injectPlantillasUsuarioEnPreparacion(
+        preparacion,
+        plantillasUsuario
+      ),
+    });
   } catch (err) {
     if (err instanceof DocumentoNoAptoError) {
       return json({ error: err.message, code: err.code }, { status: 422 });

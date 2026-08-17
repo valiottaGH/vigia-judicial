@@ -82,6 +82,7 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/api/cedulas") ||
     request.nextUrl.pathname.startsWith("/api/analisis") ||
     request.nextUrl.pathname.startsWith("/api/actuaciones") ||
+    request.nextUrl.pathname.startsWith("/api/plantillas-cedula") ||
     request.nextUrl.pathname.startsWith("/api/profile") ||
     request.nextUrl.pathname.startsWith("/api/admin") ||
     request.nextUrl.pathname.startsWith("/api/billing") ||

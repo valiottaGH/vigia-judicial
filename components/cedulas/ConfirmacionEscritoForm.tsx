@@ -257,6 +257,16 @@ export default function ConfirmacionEscritoForm({
         onChange={onChange}
       />
 
+      {logisticas.some((p) => p.id === "jurisdiccion_plantilla") && (
+        <p className="text-xs text-muted -mt-2">
+          ¿Querés usar tu propio modelo Word?{" "}
+          <Link href="/dashboard/configuracion" className="text-primary hover:underline">
+            Cargalo en Configuración
+          </Link>{" "}
+          y aparecerá como &quot;Mi modelo: …&quot; en el selector de arriba.
+        </p>
+      )}
+
       <section className="p-4 rounded-xl bg-background border border-border text-sm space-y-2">
         <h3 className="font-semibold text-gray-900">3. Firma y matriculación</h3>
         <p className="text-xs text-muted">

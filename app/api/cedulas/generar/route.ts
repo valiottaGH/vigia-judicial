@@ -25,6 +25,8 @@ import { isAiConfigured, aiConfigErrorMessage } from "@/lib/ai/config";
 import type { GenerarCedulaResponse } from "@/lib/cedulas/types";
 import { extraerTextoDocumentoParaIA } from "@/lib/expedientes/preparar-documento-ia";
 import { jurisdiccionLabelDesdeKey } from "@/lib/jurisdicciones/options";
+import { parsePlantillaSeleccion } from "@/lib/plantillas-cedula/select-options";
+import { getPlantillaCedulaUsuario } from "@/lib/plantillas-cedula/repository";
 import type { ExpedienteActuaciones } from "@/lib/actuaciones/types";
 import { PERFIL_ESCRITO_SELECT } from "@/lib/profile/perfil-escrito";
 import type { MembreteProfile } from "@/types";
@@ -246,15 +248,45 @@ async function handleGenerarCedula(request: NextRequest) {
 
   let expediente = { ...expedienteRow, caratula } as ExpedienteActuaciones;
 
-  const jurisdiccionElegida = jurisdiccionLabelDesdeKey(
+  const plantillaSeleccion = parsePlantillaSeleccion(
     body.respuestas?.jurisdiccion_plantilla
   );
-  if (jurisdiccionElegida) {
-    await supabase
-      .from("expedientes")
-      .update({ jurisdiccion: jurisdiccionElegida } as never)
-      .eq("id", expedienteId);
-    expediente = { ...expediente, jurisdiccion: jurisdiccionElegida };
+
+  let userPlantilla:
+    | { id: string; nombre: string; storagePath: string }
+    | undefined;
+
+  if (plantillaSeleccion?.type === "user") {
+    const plantilla = await getPlantillaCedulaUsuario({
+      supabase,
+      userId: user.id,
+      plantillaId: plantillaSeleccion.id,
+    });
+    if (!plantilla) {
+      return json(
+        {
+          error:
+            "La plantilla seleccionada no existe. Volvé a elegir el modelo en el paso de confirmación.",
+        },
+        { status: 400 }
+      );
+    }
+    userPlantilla = {
+      id: plantilla.id,
+      nombre: plantilla.nombre,
+      storagePath: plantilla.storage_path,
+    };
+  } else {
+    const jurisdiccionElegida = jurisdiccionLabelDesdeKey(
+      body.respuestas?.jurisdiccion_plantilla
+    );
+    if (jurisdiccionElegida) {
+      await supabase
+        .from("expedientes")
+        .update({ jurisdiccion: jurisdiccionElegida } as never)
+        .eq("id", expedienteId);
+      expediente = { ...expediente, jurisdiccion: jurisdiccionElegida };
+    }
   }
 
   let bytes: Uint8Array;
@@ -367,7 +399,7 @@ async function handleGenerarCedula(request: NextRequest) {
     expediente = { ...expediente, juzgado: interpretacion.juzgado };
   }
 
-  if (interpretacion.jurisdiccion && !jurisdiccionElegida) {
+  if (interpretacion.jurisdiccion && plantillaSeleccion?.type !== "user") {
     await supabase
       .from("expedientes")
       .update({ jurisdiccion: interpretacion.jurisdiccion } as never)
@@ -400,6 +432,7 @@ async function handleGenerarCedula(request: NextRequest) {
       interpretacion,
       profile: profileData as MembreteProfile,
       planAtGeneration: aiQuota.effectivePlan,
+      userPlantilla,
     });
   } catch (err) {
     return json(

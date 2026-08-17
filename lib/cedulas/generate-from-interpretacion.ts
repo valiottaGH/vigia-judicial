@@ -198,6 +198,11 @@ export async function generarDocumentoDesdeInterpretacion(input: {
   interpretacion: InterpretacionNotificacion;
   profile: MembreteProfile | null;
   planAtGeneration: PlanId;
+  userPlantilla?: {
+    id: string;
+    nombre: string;
+    storagePath: string;
+  };
 }): Promise<{
   actuacion_id: string;
   download_url: string;
@@ -294,6 +299,7 @@ export async function generarDocumentoDesdeInterpretacion(input: {
     abogado,
     userId: input.userId,
     planAtGeneration: input.planAtGeneration,
+    userPlantilla: input.userPlantilla,
   });
 
   return {

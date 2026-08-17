@@ -3,6 +3,7 @@ import {
   type DocumentoSolicitado,
 } from "./documento-solicitado";
 import { JURISDICCIONES_ESCRIITO, sugerirJurisdiccionKey } from "@/lib/jurisdicciones/options";
+import { USER_PLANTILLA_PREFIX } from "@/lib/plantillas-cedula/constants";
 import type {
   DatosExtraidosEscrito,
   PreguntaEscrito,
@@ -19,24 +20,40 @@ const TRAMITES_COMPLEJOS = new Set([
 ]);
 
 export function buildPreguntaJurisdiccion(
-  jurisdiccionDetectada?: string | null
+  jurisdiccionDetectada?: string | null,
+  opcionesExtra?: Array<{ value: string; label: string }>
 ): PreguntaEscrito {
   const sugerida = sugerirJurisdiccionKey(jurisdiccionDetectada);
+  const opcionesSistema = JURISDICCIONES_ESCRIITO.map((j) => ({
+    value: j.value,
+    label: j.label,
+  }));
   return {
     id: "jurisdiccion_plantilla",
     categoria: "logistica",
     label: "Jurisdicción del escrito",
-    pregunta: "Modelo de cédula/oficio según provincia o CABA",
+    pregunta: opcionesExtra?.length
+      ? "Modelo de cédula/oficio: provincial del sistema o tu plantilla DOCX"
+      : "Modelo de cédula/oficio según provincia o CABA",
     valor_sugerido: sugerida,
     requerido: true,
-    motivo:
-      "La estructura del escrito varía entre Santa Fe, PBA, CABA, Córdoba, etc.",
+    motivo: opcionesExtra?.length
+      ? "Podés usar un modelo provincial o una plantilla propia que hayas cargado en Configuración."
+      : "La estructura del escrito varía entre Santa Fe, PBA, CABA, Córdoba, etc.",
     tipo_campo: "select",
-    opciones: JURISDICCIONES_ESCRIITO.map((j) => ({
-      value: j.value,
-      label: j.label,
-    })),
+    opciones: [...opcionesSistema, ...(opcionesExtra ?? [])],
   };
+}
+
+function extractOpcionesPlantillaUsuario(
+  preguntas: PreguntaEscrito[]
+): Array<{ value: string; label: string }> {
+  const pregunta = preguntas.find((p) => p.id === "jurisdiccion_plantilla");
+  return (
+    pregunta?.opciones?.filter((o) =>
+      o.value.startsWith(USER_PLANTILLA_PREFIX)
+    ) ?? []
+  );
 }
 
 /** Preguntas estratégicas (categoría 1). */
@@ -96,9 +113,12 @@ export function buildPreguntasLogisticasPorTipo(input: {
   tipoDocumento: DocumentoSolicitado;
   datos: DatosExtraidosEscrito;
   preguntasIa: PreguntaEscrito[];
+  opcionesPlantillaExtra?: Array<{ value: string; label: string }>;
 }): PreguntaEscrito[] {
   const ids = new Set(input.preguntasIa.map((p) => p.id));
-  const out: PreguntaEscrito[] = [buildPreguntaJurisdiccion(input.datos.jurisdiccion)];
+  const out: PreguntaEscrito[] = [
+    buildPreguntaJurisdiccion(input.datos.jurisdiccion, input.opcionesPlantillaExtra),
+  ];
 
   const iaLogistica = input.preguntasIa.filter((p) => p.categoria === "logistica");
   out.push(...iaLogistica);
@@ -306,10 +326,15 @@ export function preguntasParaConfirmacion(input: {
     (p) => p.categoria === "logistica" && !LOGISTICA_FIJAS.has(p.id)
   );
 
+  const opcionesPlantillaExtra = extractOpcionesPlantillaUsuario(
+    input.preparacion.preguntas
+  );
+
   const logisticas = buildPreguntasLogisticasPorTipo({
     tipoDocumento: tipo,
     datos: input.preparacion.datos_extraidos,
     preguntasIa: iaLogistica,
+    opcionesPlantillaExtra,
   });
 
   return [...estrategicas, ...logisticas];

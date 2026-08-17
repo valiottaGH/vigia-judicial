@@ -2,6 +2,9 @@ import type { Json } from "@/types/database";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { getJurisdictionTemplate, normalizeJurisdiccionKey } from "@/lib/jurisdicciones";
 import type { PlantillaVariables } from "@/lib/jurisdicciones/types";
+import { mergePlantillaDocx } from "@/lib/plantillas-cedula/merge-docx";
+import { plantillaKeyFromUserId } from "@/lib/plantillas-cedula/select-options";
+import { downloadPlantillaFromStorage } from "@/lib/plantillas-cedula/storage";
 import { documentoToDocx } from "./docx";
 import { renderDocumento } from "./templates";
 import {
@@ -35,6 +38,12 @@ export interface GeneradorInput {
   abogado: MembreteAbogado;
   userId: string;
   planAtGeneration?: import("@/lib/subscription/plans").PlanId;
+  /** Plantilla DOCX propia del usuario (reemplaza la plantilla jurisdiccional). */
+  userPlantilla?: {
+    id: string;
+    nombre: string;
+    storagePath: string;
+  };
 }
 
 export interface MembreteAbogado {
@@ -111,10 +120,15 @@ async function generarDocumentoIndividual(
   variables: PlantillaVariables,
   index: number,
   parte: ParteExpediente,
-  abogado: MembreteAbogado
+  abogado: MembreteAbogado,
+  userTemplateBuffer?: Uint8Array
 ): Promise<DocumentoGenerado> {
-  const doc = renderDocumento(tipo, template, variables);
-  const docx = await documentoToDocx(doc, membreteFromAbogado(abogado));
+  const docx = userTemplateBuffer
+    ? mergePlantillaDocx(userTemplateBuffer, variables)
+    : await documentoToDocx(
+        renderDocumento(tipo, template, variables),
+        membreteFromAbogado(abogado)
+      );
 
   const tipoLabel =
     tipo === "cedula"
@@ -156,6 +170,7 @@ export async function generarPaqueteJudicial(
     abogado,
     userId,
     planAtGeneration = "free",
+    userPlantilla,
   } = input;
 
   const parsed = parseInstruction(request.instruccion ?? "");
@@ -186,13 +201,22 @@ export async function generarPaqueteJudicial(
     );
   }
 
-  const plantillaKey = normalizeJurisdiccionKey(expediente.jurisdiccion);
+  const plantillaKey = userPlantilla
+    ? plantillaKeyFromUserId(userPlantilla.id)
+    : normalizeJurisdiccionKey(expediente.jurisdiccion);
   const template = getJurisdictionTemplate(expediente.jurisdiccion);
 
-  if (!template) {
+  if (!userPlantilla && !template) {
     throw new ActuacionError(
       "JURISDICCION_SIN_PLANTILLA",
       `No hay plantilla para la jurisdicción "${expediente.jurisdiccion}"`
+    );
+  }
+
+  let userTemplateBuffer: Uint8Array | undefined;
+  if (userPlantilla) {
+    userTemplateBuffer = await downloadPlantillaFromStorage(
+      userPlantilla.storagePath
     );
   }
 
@@ -232,7 +256,8 @@ export async function generarPaqueteJudicial(
       variables,
       i + 1,
       parte,
-      abogado
+      abogado,
+      userTemplateBuffer
     );
     documentos.push(doc);
   }
@@ -334,7 +359,7 @@ export async function generarPaqueteJudicial(
     documentos,
     jurisdiccion: expediente.jurisdiccion,
     plantilla_key: plantillaKey,
-    plantilla_nombre: template.nombre,
+    plantilla_nombre: userPlantilla?.nombre ?? template.nombre,
     cantidad_documentos: documentos.length,
     generado_en: generadoEn,
   };

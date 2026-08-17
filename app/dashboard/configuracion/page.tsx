@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import ConfigMembreteForm from "@/components/config/ConfigMembreteForm";
+import ConfigPlantillasCedulaForm from "@/components/config/ConfigPlantillasCedulaForm";
 import { PERFIL_ESCRITO_SELECT } from "@/lib/profile/perfil-escrito";
 import type { MembreteProfile } from "@/types";
 
@@ -16,17 +17,18 @@ export default async function ConfiguracionPage() {
     .maybeSingle();
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-10">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Configuracion</h1>
         <p className="text-sm text-muted mt-1">
-          Datos de firma y membrete para todos los escritos (categoría 3 — se
-          cargan una sola vez).
+          Datos de firma, membrete y modelos de cédula para tus escritos.
         </p>
       </div>
       <ConfigMembreteForm
         initial={profile as MembreteProfile | null}
       />
+      <hr className="border-border" />
+      <ConfigPlantillasCedulaForm />
     </div>
   );
 }

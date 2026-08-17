@@ -12,6 +12,8 @@ import type { Database } from "@/types/database";
 import { downloadAdjuntoFromStorage } from "@/lib/adjuntos/storage";
 import { extraerTextoDocumentoParaIA } from "@/lib/expedientes/preparar-documento-ia";
 import { jurisdiccionLabelDesdeKey } from "@/lib/jurisdicciones/options";
+import { parsePlantillaSeleccion } from "@/lib/plantillas-cedula/select-options";
+import { getPlantillaCedulaUsuario } from "@/lib/plantillas-cedula/repository";
 import type { InterpretacionNotificacion } from "@/lib/cedulas/types";
 import type { DocumentoAnalisis, FilaAnalisis } from "./types";
 
@@ -79,15 +81,41 @@ export async function generarEscritoDesdeAnalisis(input: {
 
   let expediente = expedienteRow as ExpedienteActuaciones;
 
-  const jurisdiccionElegida = jurisdiccionLabelDesdeKey(
+  const plantillaSeleccion = parsePlantillaSeleccion(
     input.respuestasUsuario?.jurisdiccion_plantilla
   );
-  if (jurisdiccionElegida) {
-    await input.supabase
-      .from("expedientes")
-      .update({ jurisdiccion: jurisdiccionElegida } as never)
-      .eq("id", expediente.id);
-    expediente = { ...expediente, jurisdiccion: jurisdiccionElegida };
+
+  let userPlantilla:
+    | { id: string; nombre: string; storagePath: string }
+    | undefined;
+
+  if (plantillaSeleccion?.type === "user") {
+    const plantilla = await getPlantillaCedulaUsuario({
+      supabase: input.supabase,
+      userId: input.userId,
+      plantillaId: plantillaSeleccion.id,
+    });
+    if (!plantilla) {
+      throw new Error(
+        "La plantilla seleccionada no existe. Volvé a elegir el modelo en el paso de confirmación."
+      );
+    }
+    userPlantilla = {
+      id: plantilla.id,
+      nombre: plantilla.nombre,
+      storagePath: plantilla.storage_path,
+    };
+  } else {
+    const jurisdiccionElegida = jurisdiccionLabelDesdeKey(
+      input.respuestasUsuario?.jurisdiccion_plantilla
+    );
+    if (jurisdiccionElegida) {
+      await input.supabase
+        .from("expedientes")
+        .update({ jurisdiccion: jurisdiccionElegida } as never)
+        .eq("id", expediente.id);
+      expediente = { ...expediente, jurisdiccion: jurisdiccionElegida };
+    }
   }
 
   const interpretacion = await interpretarNotificacion({
@@ -110,7 +138,7 @@ export async function generarEscritoDesdeAnalisis(input: {
     expedienteAfter = { ...expedienteAfter, juzgado: interpretacion.juzgado };
   }
 
-  if (interpretacion.jurisdiccion && !jurisdiccionElegida) {
+  if (interpretacion.jurisdiccion && plantillaSeleccion?.type !== "user") {
     await input.supabase
       .from("expedientes")
       .update({ jurisdiccion: interpretacion.jurisdiccion } as never)
@@ -135,6 +163,7 @@ export async function generarEscritoDesdeAnalisis(input: {
     interpretacion,
     profile: input.profile,
     planAtGeneration: input.planAtGeneration,
+    userPlantilla,
   });
 
   return {
