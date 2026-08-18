@@ -20,6 +20,8 @@ function escapeHtml(text: string): string {
 
 export async function sendSupportEmail(input: {
   userEmail: string;
+  userName?: string | null;
+  userId?: string;
   message: string;
   pageUrl?: string | null;
   userAgent?: string | null;
@@ -35,21 +37,44 @@ export async function sendSupportEmail(input: {
   }
 
   const messageText = input.message.trim();
-  const metaLines = [`Usuario: ${input.userEmail}`];
-  if (input.pageUrl) metaLines.push(`Página: ${input.pageUrl}`);
-  if (input.userAgent) metaLines.push(`Navegador: ${input.userAgent}`);
+  const userLabel = input.userName
+    ? `${input.userName} <${input.userEmail}>`
+    : input.userEmail;
 
-  const textBody = [messageText, "", "---", ...metaLines].join("\n");
+  const metaLines = [
+    `Email registrado: ${input.userEmail}`,
+    input.userName ? `Nombre: ${input.userName}` : "",
+    input.userId ? `ID usuario: ${input.userId}` : "",
+    input.pageUrl ? `Página: ${input.pageUrl}` : "",
+    input.userAgent ? `Navegador: ${input.userAgent}` : "",
+  ].filter(Boolean);
+
+  const textBody = [
+    `Consulta de: ${userLabel}`,
+    "",
+    messageText,
+    "",
+    "---",
+    ...metaLines,
+    "",
+    "Respondé a este correo para escribirle al usuario (Reply-To configurado).",
+  ].join("\n");
 
   const htmlBody = `
-    <div style="font-family:system-ui,sans-serif;line-height:1.5;color:#111">
-      <h2 style="color:#003785;margin:0 0 12px">Nueva consulta — Fast Cedu</h2>
-      <p style="white-space:pre-wrap;background:#f3faff;border:1px solid #cce9f9;border-radius:8px;padding:12px">${escapeHtml(messageText)}</p>
-      <table style="margin-top:16px;font-size:14px;color:#525252">
-        <tr><td style="padding:4px 12px 4px 0"><strong>Usuario</strong></td><td>${escapeHtml(input.userEmail)}</td></tr>
+    <div style="font-family:system-ui,sans-serif;line-height:1.5;color:#111;max-width:560px">
+      <h2 style="color:#003785;margin:0 0 16px">Nueva consulta — Fast Cedu</h2>
+      <div style="background:#003785;color:#fff;border-radius:8px;padding:12px 16px;margin-bottom:16px">
+        <p style="margin:0;font-size:12px;opacity:0.85;text-transform:uppercase;letter-spacing:0.04em">Usuario registrado</p>
+        <p style="margin:4px 0 0;font-size:18px;font-weight:600">${escapeHtml(input.userEmail)}</p>
+        ${input.userName ? `<p style="margin:4px 0 0;font-size:14px;opacity:0.9">${escapeHtml(input.userName)}</p>` : ""}
+      </div>
+      <p style="margin:0 0 8px;font-size:13px;color:#525252;font-weight:600">Mensaje:</p>
+      <p style="white-space:pre-wrap;background:#f3faff;border:1px solid #cce9f9;border-radius:8px;padding:12px;margin:0">${escapeHtml(messageText)}</p>
+      <table style="margin-top:16px;font-size:13px;color:#525252">
+        ${input.userId ? `<tr><td style="padding:4px 12px 4px 0"><strong>ID</strong></td><td style="font-family:monospace;font-size:12px">${escapeHtml(input.userId)}</td></tr>` : ""}
         ${input.pageUrl ? `<tr><td style="padding:4px 12px 4px 0"><strong>Página</strong></td><td>${escapeHtml(input.pageUrl)}</td></tr>` : ""}
       </table>
-      <p style="margin-top:20px;font-size:13px;color:#525252">Respondé directamente a este correo para contactar al usuario.</p>
+      <p style="margin-top:20px;font-size:13px;color:#525252">Usá <strong>Responder</strong> en Gmail para contactar a <strong>${escapeHtml(input.userEmail)}</strong>.</p>
     </div>
   `.trim();
 
@@ -63,7 +88,7 @@ export async function sendSupportEmail(input: {
       from: getSupportFromEmail(),
       to: [inbox],
       reply_to: input.userEmail,
-      subject: `[Fast Cedu] Consulta de ${input.userEmail}`,
+      subject: `[Fast Cedu] ${input.userEmail} — consulta de soporte`,
       text: textBody,
       html: htmlBody,
     }),

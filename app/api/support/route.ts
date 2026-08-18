@@ -84,8 +84,16 @@ export async function POST(request: Request) {
   }
 
   try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .maybeSingle();
+
     await sendSupportEmail({
       userEmail: user.email,
+      userName: profile?.full_name ?? null,
+      userId: user.id,
       message,
       pageUrl,
       userAgent: request.headers.get("user-agent"),
