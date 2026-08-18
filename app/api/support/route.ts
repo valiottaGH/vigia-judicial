@@ -5,7 +5,7 @@ import {
   rateLimitKey,
   rateLimitResponse,
 } from "@/lib/security/rate-limit";
-import { isSupportEmailConfigured } from "@/lib/support/config";
+import { isSupportEmailConfigured, getSupportConfigStatus } from "@/lib/support/config";
 import {
   sendSupportEmail,
   SupportEmailError,
@@ -21,6 +21,12 @@ interface SupportBody {
 
 export async function POST(request: Request) {
   if (!isSupportEmailConfigured()) {
+    const status = getSupportConfigStatus();
+    console.error("[api/support] not configured", {
+      hasResendKey: status.hasResendKey,
+      hasInbox: status.hasInbox,
+      inboxEmail: status.inboxEmail,
+    });
     return NextResponse.json(
       {
         error:

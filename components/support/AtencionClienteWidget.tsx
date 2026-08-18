@@ -78,7 +78,7 @@ export default function AtencionClienteWidget({
         if (data.code === "SUPPORT_NOT_CONFIGURED") {
           setFeedback({
             type: "error",
-            text: `El envío automático no está activo. Escribinos a ${SUPPORT_EMAIL} y te respondemos.`,
+            text: `El envío automático no está activo. Si acabás de configurar Vercel, hacé redeploy y probá de nuevo. También podés escribirnos a ${SUPPORT_EMAIL}.`,
           });
           return;
         }

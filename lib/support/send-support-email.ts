@@ -1,4 +1,4 @@
-import { getSupportFromEmail, getSupportInboxEmail } from "./config";
+import { getSupportFromEmail, getSupportInboxEmail, getResendApiKey } from "./config";
 
 export class SupportEmailError extends Error {
   constructor(
@@ -26,7 +26,7 @@ export async function sendSupportEmail(input: {
   pageUrl?: string | null;
   userAgent?: string | null;
 }): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const apiKey = getResendApiKey();
   const inbox = getSupportInboxEmail();
 
   if (!apiKey || !inbox) {
